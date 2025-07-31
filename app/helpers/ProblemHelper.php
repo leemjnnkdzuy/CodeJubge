@@ -17,7 +17,6 @@ class ProblemHelper {
             return $TYPE_PROBLEM[$type]['icon'];
         }
         
-        // Default icon
         return 'bx-code-alt';
     }
 
@@ -93,10 +92,7 @@ class ProblemHelper {
         
         return $colors[$difficulty] ?? '#6c757d';
     }
-    
-    /**
-     * Format acceptance rate
-     */
+
     public static function formatAcceptanceRate($rate) {
         if ($rate === null || $rate === 0) {
             return 'N/A';
@@ -104,10 +100,7 @@ class ProblemHelper {
         
         return number_format($rate, 1) . '%';
     }
-    
-    /**
-     * Format số lượng đã giải
-     */
+
     public static function formatSolvedCount($count) {
         if ($count < 1000) {
             return number_format($count);

@@ -2,7 +2,6 @@
 $title = 'Problems - CodeJudge';
 $description = 'Explore coding problems to practice your programming skills';
 
-// Load TYPE_PROBLEM configuration for displaying names
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../helpers/ProblemHelper.php';
 

@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
     
     let editor;
     
-    // Initialize CodeMirror if available, otherwise use textarea
     if (typeof CodeMirror !== 'undefined') {
         editor = CodeMirror.fromTextArea(codeEditor, {
             lineNumbers: true,
@@ -22,11 +21,9 @@ document.addEventListener("DOMContentLoaded", function () {
             scrollbarStyle: "simple"
         });
         
-        // Set initial size
         editor.setSize(null, 400);
     }
     
-    // Language templates
     const languageTemplates = {
         python: `# Viết code Python của bạn ở đây
 def solution():
@@ -85,7 +82,6 @@ int main() {
 }`
     };
     
-    // Language mode mapping for CodeMirror
     const languageModes = {
         python: 'python',
         cpp: 'text/x-c++src',
@@ -94,30 +90,24 @@ int main() {
         c: 'text/x-csrc'
     };
     
-    // Change language handler
     languageSelect.addEventListener('change', function() {
         const selectedLanguage = this.value;
         const template = languageTemplates[selectedLanguage];
         
         if (editor) {
-            // Update CodeMirror
             editor.setValue(template);
             editor.setOption('mode', languageModes[selectedLanguage]);
         } else {
-            // Update textarea
             codeEditor.value = template;
         }
     });
     
-    // Set initial template
     languageSelect.dispatchEvent(new Event('change'));
     
-    // Get current code
     function getCurrentCode() {
         return editor ? editor.getValue() : codeEditor.value;
     }
     
-    // Run code handler
     runBtn.addEventListener('click', function() {
         const code = getCurrentCode().trim();
         const language = languageSelect.value;
@@ -127,11 +117,9 @@ int main() {
             return;
         }
         
-        // Show loading state
         runBtn.disabled = true;
         runBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Đang chạy...';
         
-        // Simulate API call to run code
         runCode(code, language)
             .then(result => {
                 showTestResults(result);
@@ -140,13 +128,11 @@ int main() {
                 showError('Có lỗi xảy ra khi chạy code: ' + error.message);
             })
             .finally(() => {
-                // Reset button state
                 runBtn.disabled = false;
                 runBtn.innerHTML = '<i class="bx bx-play"></i> Chạy thử';
             });
     });
     
-    // Submit code handler
     submitBtn.addEventListener('click', function() {
         const code = getCurrentCode().trim();
         const language = languageSelect.value;
@@ -156,16 +142,13 @@ int main() {
             return;
         }
         
-        // Confirm submission
         if (!confirm('Bạn có chắc chắn muốn nộp bài này không?')) {
             return;
         }
         
-        // Show loading state
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Đang nộp...';
         
-        // Simulate API call to submit code
         submitCode(code, language)
             .then(result => {
                 showSubmissionResult(result);
@@ -174,18 +157,14 @@ int main() {
                 showError('Có lỗi xảy ra khi nộp bài: ' + error.message);
             })
             .finally(() => {
-                // Reset button state
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bx bx-send"></i> Nộp bài';
             });
     });
     
-    // Mock API functions (replace with actual API calls)
     async function runCode(code, language) {
-        // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Mock response
         return {
             success: true,
             output: "Sample output from your code\nTest case 1: ✅ PASSED\nTest case 2: ✅ PASSED",
@@ -196,14 +175,11 @@ int main() {
     }
     
     async function submitCode(code, language) {
-        // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Get problem ID from URL
         const pathParts = window.location.pathname.split('/');
         const problemSlug = pathParts[pathParts.length - 1];
         
-        // Mock response
         return {
             success: true,
             submission_id: 12345,
@@ -216,7 +192,6 @@ int main() {
         };
     }
     
-    // Show test results
     function showTestResults(result) {
         if (result.success) {
             resultsContent.innerHTML = `
@@ -253,7 +228,6 @@ int main() {
         testResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    // Show submission result
     function showSubmissionResult(result) {
         let statusClass = 'success';
         let statusIcon = 'bx-check-circle';
@@ -284,10 +258,8 @@ int main() {
             </div>
         `;
         
-        // Create modal or notification
         showNotification(resultHtml);
         
-        // Optionally reload page to show new submission in history
         if (result.success) {
             setTimeout(() => {
                 window.location.reload();
@@ -295,7 +267,6 @@ int main() {
         }
     }
     
-    // Show error message
     function showError(message) {
         resultsContent.innerHTML = `
             <div class="test-error">
@@ -313,9 +284,7 @@ int main() {
         testResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    // Show notification (you can customize this)
     function showNotification(html) {
-        // Create notification container if it doesn't exist
         let notificationContainer = document.getElementById('notification-container');
         if (!notificationContainer) {
             notificationContainer = document.createElement('div');
@@ -330,7 +299,6 @@ int main() {
             document.body.appendChild(notificationContainer);
         }
         
-        // Create notification element
         const notification = document.createElement('div');
         notification.style.cssText = `
             background: white;
@@ -345,7 +313,6 @@ int main() {
         notification.innerHTML = html;
         notificationContainer.appendChild(notification);
         
-        // Add CSS animation
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
@@ -355,28 +322,23 @@ int main() {
         `;
         document.head.appendChild(style);
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             notification.remove();
         }, 5000);
     }
     
-    // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + Enter to run code
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
             runBtn.click();
         }
         
-        // Ctrl/Cmd + Shift + Enter to submit code
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
             e.preventDefault();
             submitBtn.click();
         }
     });
     
-    // Auto-save code to localStorage
     function autoSave() {
         const code = getCurrentCode();
         const language = languageSelect.value;
@@ -386,7 +348,6 @@ int main() {
         localStorage.setItem(`problem_${problemSlug}_language`, language);
     }
     
-    // Load saved code
     function loadSavedCode() {
         const problemSlug = window.location.pathname.split('/').pop();
         const savedCode = localStorage.getItem(`problem_${problemSlug}_code`);
@@ -405,11 +366,10 @@ int main() {
         }
     }
     
-    // Set up auto-save
     let saveTimeout;
     function scheduleAutoSave() {
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(autoSave, 1000); // Save after 1 second of inactivity
+        saveTimeout = setTimeout(autoSave, 1000);
     }
     
     if (editor) {
@@ -420,6 +380,5 @@ int main() {
     
     languageSelect.addEventListener('change', autoSave);
     
-    // Load saved code on page load
     loadSavedCode();
 });

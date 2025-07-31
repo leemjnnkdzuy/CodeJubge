@@ -1,8 +1,4 @@
 <?php
-/**
- * Base Controller Class
- */
-
 class Controller
 {
     protected function view($viewName, $data = [])

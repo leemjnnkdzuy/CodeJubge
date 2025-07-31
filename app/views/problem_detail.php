@@ -1,5 +1,4 @@
 <?php
-// Prepare data for layout
 $title = htmlspecialchars($problem['title'] ?? 'Chi tiết bài tập - CodeJudge');
 $description = htmlspecialchars($problem['description'] ?? 'Giải quyết bài tập lập trình với CodeJudge');
 

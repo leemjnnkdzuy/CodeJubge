@@ -1,5 +1,4 @@
 <?php 
-// Xác định xem đang xem profile của ai
 $viewingUser = isset($profileUser) ? $profileUser : $currentUser;
 $isOwnProfile = isset($isOwnProfile) ? $isOwnProfile : true;
 
@@ -12,7 +11,6 @@ $content = ob_start();
 ?>
 
 <div class="profile-container">
-    <!-- Profile Header -->
     <div class="profile-header">
         <div class="profile-avatar-section">
             <div class="avatar-container">
@@ -60,9 +58,7 @@ $content = ob_start();
         </div>
     </div>
     
-    <!-- Profile Content -->
     <div class="profile-content">
-        <!-- Bio Section -->
         <div class="profile-section">
             <h2 class="section-title">Giới thiệu</h2>
             <div class="bio-content">
@@ -76,7 +72,6 @@ $content = ob_start();
             </div>
         </div>
         
-        <!-- Links Section -->
         <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url'])): ?>
         <div class="profile-section">
             <h2 class="section-title">Liên kết</h2>
@@ -105,7 +100,6 @@ $content = ob_start();
         </div>
         <?php endif; ?>
         
-        <!-- Badges Section -->
         <div class="profile-section">
             <h2 class="section-title">Huy hiệu & Thành tích</h2>
             <div class="badges-grid">
@@ -133,7 +127,6 @@ $content = ob_start();
             <?php endif; ?>
         </div>
         
-        <!-- Activity Timeline (Future feature) -->
         <div class="profile-section">
             <h2 class="section-title">Hoạt động gần đây</h2>
             <div class="activity-timeline">
@@ -143,7 +136,6 @@ $content = ob_start();
     </div>
 </div>
 
-<!-- Edit Profile Modal -->
 <?php if ($isOwnProfile): ?>
 <div class="modal" id="editProfileModal">
     <div class="modal-content">
@@ -211,7 +203,6 @@ $content = ob_start();
     </div>
 </div>
 
-<!-- Avatar Upload Modal -->
 <div class="modal" id="avatarModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -244,7 +235,6 @@ $content = ob_start();
 <?php endif; ?>
 
 <script>
-// Modal functions
 function openEditModal() {
     document.getElementById('editProfileModal').style.display = 'flex';
 }
@@ -261,28 +251,24 @@ function closeAvatarModal() {
     document.getElementById('avatarModal').style.display = 'none';
 }
 
-// Avatar preview
 function previewAvatar(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         
-        // Kiểm tra định dạng file
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
             showNotification('error', 'Chỉ chấp nhận file ảnh với định dạng JPG, PNG, GIF, WebP!');
-            input.value = ''; // Reset input
+            input.value = '';
             return;
         }
         
-        // Kiểm tra kích thước file (2MB = 2048000 bytes)
-        const maxSize = 2048000; // 2MB
+        const maxSize = 2048000;
         if (file.size > maxSize) {
             showNotification('error', 'File ảnh quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
-            input.value = ''; // Reset input
+            input.value = '';
             return;
         }
         
-        // Nếu validation pass, hiển thị preview
         const reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById('avatarPreview').src = e.target.result;
@@ -292,7 +278,6 @@ function previewAvatar(input) {
     }
 }
 
-// Debug form submission
 function debugFormSubmit(form) {
     console.log('Form being submitted:');
     const formData = new FormData(form);
@@ -303,7 +288,6 @@ function debugFormSubmit(form) {
     return true;
 }
 
-// Validate avatar form before submit
 function validateAvatarForm(form) {
     const fileInput = form.querySelector('#avatar');
     
@@ -314,34 +298,28 @@ function validateAvatarForm(form) {
     
     const file = fileInput.files[0];
     
-    // Kiểm tra định dạng file
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
         showNotification('error', 'Định dạng file không được hỗ trợ! Chỉ chấp nhận JPG, PNG, GIF, WebP.');
         return false;
     }
     
-    // Kiểm tra kích thước file
-    const maxSize = 2048000; // 2MB
+    const maxSize = 2048000;
     if (file.size > maxSize) {
         showNotification('error', 'File quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
         return false;
     }
     
-    // Hiển thị loading notification
     showNotification('info', 'Đang tải ảnh lên...');
     return true;
 }
 
-// Show notification function (sử dụng popup notification component)
 function showNotification(type, message) {
-    // Remove existing notification if any
     const existing = document.getElementById('popupNotification');
     if (existing) {
         existing.remove();
     }
     
-    // Create new notification
     const notification = document.createElement('div');
     notification.id = 'popupNotification';
     notification.className = `popup-notification ${type}`;
@@ -377,12 +355,10 @@ function showNotification(type, message) {
     
     document.body.appendChild(notification);
     
-    // Show notification
     setTimeout(() => {
         notification.classList.add('show');
     }, 100);
     
-    // Auto hide after 5 seconds (except for loading)
     if (type !== 'info') {
         setTimeout(() => {
             closeNotification();
@@ -390,7 +366,6 @@ function showNotification(type, message) {
     }
 }
 
-// Close notification function
 function closeNotification() {
     const notification = document.getElementById('popupNotification');
     if (notification) {
@@ -401,7 +376,6 @@ function closeNotification() {
     }
 }
 
-// Close modal when clicking outside
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
         e.target.style.display = 'none';
@@ -410,108 +384,7 @@ document.addEventListener('click', function(e) {
 </script>
 
 <style>
-/* Popup Notification Styles */
-.popup-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    max-width: 400px;
-    min-width: 300px;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s ease-in-out;
-    font-family: 'Inter Tight', sans-serif;
-}
 
-.popup-notification.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.notification-content {
-    display: flex;
-    align-items: center;
-    padding: 16px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: white;
-    border-left: 4px solid;
-}
-
-.popup-notification.success .notification-content {
-    border-left-color: #10b981;
-    background: #f0fdf4;
-}
-
-.popup-notification.error .notification-content {
-    border-left-color: #ef4444;
-    background: #fef2f2;
-}
-
-.popup-notification.warning .notification-content {
-    border-left-color: #f59e0b;
-    background: #fffbeb;
-}
-
-.popup-notification.info .notification-content {
-    border-left-color: #3b82f6;
-    background: #eff6ff;
-}
-
-.notification-icon {
-    margin-right: 12px;
-    font-size: 20px;
-}
-
-.popup-notification.success .notification-icon {
-    color: #10b981;
-}
-
-.popup-notification.error .notification-icon {
-    color: #ef4444;
-}
-
-.popup-notification.warning .notification-icon {
-    color: #f59e0b;
-}
-
-.popup-notification.info .notification-icon {
-    color: #3b82f6;
-}
-
-.notification-message {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    line-height: 1.4;
-}
-
-.notification-close {
-    background: none;
-    border: none;
-    font-size: 18px;
-    color: #6b7280;
-    cursor: pointer;
-    padding: 4px;
-    margin-left: 12px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-
-.notification-close:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-@media (max-width: 480px) {
-    .popup-notification {
-        right: 10px;
-        left: 10px;
-        max-width: none;
-        min-width: auto;
-    }
-}
 </style>
 
 <?php 

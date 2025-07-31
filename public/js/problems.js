@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		page: 1,
 	};
 
-	// Sticky header functionality
 	const scrollTrigger = document.createElement("div");
 	scrollTrigger.style.position = "absolute";
 	scrollTrigger.style.top = "200px";
@@ -82,7 +81,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	observer.observe(scrollTrigger);
 
-	// Toggle problem types
 	if (toggleBtn) {
 		toggleBtn.addEventListener("click", function () {
 			isExpanded = !isExpanded;
@@ -101,7 +99,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// Search functionality
 	function performSearch() {
 		currentFilters.search = searchInput.value.trim();
 		currentFilters.page = 1;
@@ -120,7 +117,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// Problem type selection
 	document.querySelectorAll(".problem-type-item").forEach((item) => {
 		item.addEventListener("click", function () {
 			const type = this.dataset.type;
@@ -138,7 +134,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	});
 
-	// Difficulty filters
 	document.querySelectorAll(".difficulty-filter input").forEach((checkbox) => {
 		checkbox.addEventListener("change", function () {
 			const difficulty = this.value;
@@ -155,14 +150,11 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	});
 
-	// Status filters
 	document.querySelectorAll(".status-filter input").forEach((checkbox) => {
 		checkbox.addEventListener("change", function () {
 			const status = this.value;
 
-			// Handle radio-like behavior for status
 			if (this.checked) {
-				// Uncheck other status filters
 				document.querySelectorAll(".status-filter input").forEach((cb) => {
 					if (cb !== this) cb.checked = false;
 				});
@@ -171,7 +163,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	});
 
-	// Apply filters
 	function applyFilters() {
 		const params = new URLSearchParams();
 
@@ -193,11 +184,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		params.append("page", currentFilters.page);
 
-		// Reload page with new filters
 		window.location.href = "/problems?" + params.toString();
 	}
 
-	// Apply filters button
 	if (applyFiltersBtn) {
 		applyFiltersBtn.addEventListener("click", function () {
 			currentFilters.page = 1;
@@ -205,7 +194,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// Problem item click to view details
 	document.querySelectorAll(".problem-item").forEach((item) => {
 		item.addEventListener("click", function () {
 			const slug = this.dataset.slug;
@@ -215,7 +203,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	});
 
-	// Initialize filters from URL
 	function initializeFiltersFromURL() {
 		const urlParams = new URLSearchParams(window.location.search);
 
@@ -229,22 +216,18 @@ document.addEventListener("DOMContentLoaded", function () {
 		currentFilters.status = urlParams.get("status") || "all";
 		currentFilters.page = parseInt(urlParams.get("page")) || 1;
 
-		// Set search input value
 		if (searchInput && currentFilters.search) {
 			searchInput.value = currentFilters.search;
 		}
 
-		// Set difficulty checkboxes
 		document.querySelectorAll(".difficulty-filter input").forEach((checkbox) => {
 			checkbox.checked = currentFilters.difficulty.includes(checkbox.value);
 		});
 
-		// Set status checkboxes
 		document.querySelectorAll(".status-filter input").forEach((checkbox) => {
 			checkbox.checked = checkbox.value === currentFilters.status;
 		});
 
-		// Set problem type selections
 		document.querySelectorAll(".problem-type-item").forEach((item) => {
 			const type = item.dataset.type;
 			if (currentFilters.problem_types.includes(type)) {
@@ -253,11 +236,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// Initialize on page load
 	initializeFiltersFromURL();
 });
 
-// Global function for pagination
 function changePage(page) {
 	const urlParams = new URLSearchParams(window.location.search);
 	urlParams.set("page", page);

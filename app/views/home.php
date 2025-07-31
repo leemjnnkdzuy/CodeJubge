@@ -1,13 +1,11 @@
 <?php 
 require_once APP_PATH . '/models/UserModel.php';
 
-// Kiểm tra đăng nhập
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login');
     exit;
 }
 
-// Lấy thông tin user
 $userModel = new UserModel();
 $currentUser = $userModel->getUserById($_SESSION['user_id']);
 $userBadges = $userModel->getUserBadges($_SESSION['user_id']);

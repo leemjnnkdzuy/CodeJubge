@@ -1,22 +1,12 @@
 <?php
-/**
- * Avatar Helper Class
- * Xử lý việc tạo và quản lý avatar cho user
- */
 class AvatarHelper {
-    
-    /**
-     * Lấy default avatar dưới dạng base64
-     */
     public static function getDefaultAvatarBase64() {
         $defaultAvatarPath = PUBLIC_PATH . '/assets/default_avatar.png';
         
         if (!file_exists($defaultAvatarPath)) {
-            // Nếu không có file default, tạo avatar đơn giản
             return self::generateSimpleAvatar();
         }
         
-        // Nếu có file default, sử dụng nó
         $imageData = file_get_contents($defaultAvatarPath);
         $imageInfo = getimagesize($defaultAvatarPath);
         
@@ -25,45 +15,34 @@ class AvatarHelper {
             return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
         }
         
-        // Fallback nếu không đọc được file
         return self::generateSimpleAvatar();
     }
-    
-    /**
-     * Kiểm tra xem GD extension có được enable không
-     */
+
     private static function isGDEnabled() {
         return extension_loaded('gd');
     }
-    
-    /**
-     * Tạo avatar đơn giản với initials
-     */
+
     public static function generateSimpleAvatar($initials = 'U', $size = 150) {
-        // Kiểm tra GD extension
         if (!self::isGDEnabled()) {
-            // Fallback: return một base64 của ảnh mặc định hoặc tạo SVG
             return self::generateSVGAvatar($initials, $size);
         }
         
-        // Tạo image với GD
         $image = imagecreate($size, $size);
         
-        // Màu nền ngẫu nhiên
         $bgColors = [
-            [52, 152, 219],   // Blue
-            [155, 89, 182],   // Purple
-            [26, 188, 156],   // Turquoise
-            [241, 196, 15],   // Yellow
-            [230, 126, 34],   // Orange
-            [231, 76, 60],    // Red
+            [52, 152, 219],
+            [155, 89, 182],
+            [26, 188, 156],
+            [241, 196, 15],
+            [230, 126, 34],
+            [231, 76, 60],
             [46, 204, 113],
             [149, 165, 166]
         ];
         
         $randomColor = $bgColors[array_rand($bgColors)];
         $bgColor = imagecolorallocate($image, $randomColor[0], $randomColor[1], $randomColor[2]);
-        $textColor = imagecolorallocate($image, 255, 255, 255); // White text
+        $textColor = imagecolorallocate($image, 255, 255, 255);
         
         imagefill($image, 0, 0, $bgColor);
         
@@ -109,11 +88,8 @@ class AvatarHelper {
         
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
-    
-    /**
-     * Validate và convert uploaded image thành base64
-     */
-    public static function processUploadedImage($file, $maxSize = 2048000) { // 2MB
+
+    public static function processUploadedImage($file, $maxSize = 2048000) {
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
             throw new Exception("File không hợp lệ");
         }
@@ -129,9 +105,7 @@ class AvatarHelper {
             throw new Exception("Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP)");
         }
         
-        // Kiểm tra GD extension
         if (!self::isGDEnabled()) {
-            // Fallback: chỉ return file gốc mà không resize
             $imageData = file_get_contents($file['tmp_name']);
             return 'data:' . $imageInfo['mime'] . ';base64,' . base64_encode($imageData);
         }
@@ -142,7 +116,6 @@ class AvatarHelper {
     }
     
     private static function resizeImage($imagePath, $mimeType, $maxWidth = 300, $maxHeight = 300) {
-        // Kiểm tra GD extension trước khi sử dụng
         if (!self::isGDEnabled()) {
             throw new Exception("GD extension không có sẵn để xử lý ảnh");
         }
@@ -185,10 +158,10 @@ class AvatarHelper {
         ob_start();
         switch ($mimeType) {
             case 'image/jpeg':
-                imagejpeg($newImage, null, 85); // 85% quality
+                imagejpeg($newImage, null, 85);
                 break;
             case 'image/png':
-                imagepng($newImage, null, 6); // Compression level 6
+                imagepng($newImage, null, 6);
                 break;
             case 'image/gif':
                 imagegif($newImage);
