@@ -12,6 +12,8 @@ $routes = [
     'problems/create' => 'ProblemController@create',
     'problems/store' => 'ProblemController@store',
     
+    'languages' => 'pagesController@languages',
+    
     'submit' => 'SubmissionController@submit',
     'submissions' => 'SubmissionController@index',
     'submissions/(\d+)' => 'SubmissionController@show',
@@ -21,6 +23,12 @@ $routes = [
     'register' => 'pagesController@register',
     'logout' => 'pagesController@logout',
     'forgot-password' => 'pagesController@forgotPassword',
+    
+    // Documentation routes
+    'docs/privacy' => 'pagesController@privacy',
+    'docs/terms' => 'pagesController@terms',
+    'docs/cookies' => 'pagesController@cookies',
+    'docs/contact' => 'pagesController@contact',
     
     // User routes
     'profile' => 'ProfileController@index',

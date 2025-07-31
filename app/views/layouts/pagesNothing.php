@@ -19,6 +19,16 @@
         echo '<link rel="stylesheet" href="/css/fogotPasswordStyle.css">';
     } elseif (strpos($current_uri, '/problems/') !== false || isset($problem)) {
         echo '<link rel="stylesheet" href="/css/problemDetailStyle.css">';
+    } elseif ($current_page === 'terms') {
+        echo '<link rel="stylesheet" href="/css/termsStyle.css">';
+    } elseif ($current_page === 'privacy') {
+        echo '<link rel="stylesheet" href="/css/privacyStyle.css">';
+    } elseif ($current_page === 'cookies') {
+        echo '<link rel="stylesheet" href="/css/cookiesStyle.css">';
+    } elseif ($current_page === 'languages') {
+        echo '<link rel="stylesheet" href="/css/languagesStyle.css">';
+    } elseif (strpos($current_uri, '/docs/') !== false) {
+        echo '<link rel="stylesheet" href="/css/docsStyle.css">';
     } else {
         echo '<link rel="stylesheet" href="/css/404Style.css">';
     }

@@ -77,7 +77,7 @@ $content = ob_start();
                     <div class="form-group">
                         <label class="checkbox-container">
                             <input type="checkbox" name="terms" class="checkbox-input" required>
-                            Tôi đồng ý với <a href="/terms" class="terms-link">Điều khoản Dịch vụ</a> và <a href="/privacy" class="terms-link">Chính sách Bảo mật</a>
+                            Tôi đồng ý với <a href="/docs/terms" class="terms-link">Điều khoản Dịch vụ</a> và <a href="/docs/privacy" class="terms-link">Chính sách Bảo mật</a>
                         </label>
                     </div>
                     

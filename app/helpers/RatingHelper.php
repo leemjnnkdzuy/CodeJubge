@@ -60,4 +60,20 @@ function getRatingProgress($rating) {
     }
 }
 
+function getUserRank($rating) {
+    global $RANKING;
+    
+    if (!isset($rating) || $rating == -1) {
+        return $RANKING['Unranked'];
+    }
+    
+    foreach ($RANKING as $rankKey => $rankData) {
+        if ($rating >= $rankData['start_point'] && $rating <= $rankData['end_point']) {
+            return $rankData;
+        }
+    }
+    
+    return $RANKING['Unranked'];
+}
+
 ?>

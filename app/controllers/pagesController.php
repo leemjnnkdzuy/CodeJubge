@@ -235,5 +235,35 @@ class pagesController extends Controller
         $title = '404 - Không Tìm Thấy Trang';
         include VIEW_PATH . '/404.php';
     }
+    
+    public function privacy()
+    {
+        include VIEW_PATH . '/privacy.php';
+    }
+    
+    public function terms()
+    {
+        include VIEW_PATH . '/terms.php';
+    }
+    
+    public function cookies()
+    {
+        include VIEW_PATH . '/cookies.php';
+    }
+    
+    public function apiReference()
+    {
+        include VIEW_PATH . '/api-reference.php';
+    }
+    
+    public function contact()
+    {
+        include VIEW_PATH . '/contact.php';
+    }
+    
+    public function languages()
+    {
+        include VIEW_PATH . '/languages.php';
+    }
 }
 ?>

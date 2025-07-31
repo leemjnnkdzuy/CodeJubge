@@ -12,49 +12,53 @@ $content = ob_start();
 
 <div class="profile-container">
     <div class="profile-header">
-        <div class="profile-avatar-section">
+        <div class="profile-main-info">
             <div class="avatar-container">
                 <img src="<?= AvatarHelper::base64ToImageSrc($viewingUser['avatar']) ?>" 
                      alt="Avatar" class="profile-avatar">
+            </div>
+            
+            <div class="profile-info">
+                <h1 class="profile-name">
+                    <?= htmlspecialchars($viewingUser['first_name'] . ' ' . $viewingUser['last_name']) ?>
+                </h1>
+                <p class="profile-username">@<?= htmlspecialchars($viewingUser['username']) ?></p>
+                
                 <?php if ($isOwnProfile): ?>
-                <button class="avatar-edit-btn" onclick="openAvatarModal()">
-                    <i class='bx bx-camera'></i>
+                <button class="edit-profile-btn" onclick="openEditModal()">
+                    <i class='bx bx-edit'></i>
+                    Chỉnh sửa profile
                 </button>
                 <?php endif; ?>
             </div>
         </div>
         
-        <div class="profile-info">
-            <h1 class="profile-name">
-                <?= htmlspecialchars($viewingUser['first_name'] . ' ' . $viewingUser['last_name']) ?>
-            </h1>
-            <p class="profile-username">@<?= htmlspecialchars($viewingUser['username']) ?></p>
-            
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <span class="stat-number"><?= isset($viewingUser['rating']) && $viewingUser['rating'] != -1 ? $viewingUser['rating'] : 'Chưa có xếp hạng' ?></span>
-                    <span class="stat-label">Rating</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number"><?= $viewingUser['total_problems_solved'] ?? 0 ?></span>
-                    <span class="stat-label">Bài giải</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number"><?= $viewingUser['login_streak'] ?? 0 ?></span>
-                    <span class="stat-label">Streak</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number"><?= count($userBadges) ?></span>
-                    <span class="stat-label">Badges</span>
-                </div>
+        <div class="rank-display">
+            <?php 
+            $userRank = getUserRank($viewingUser['rating'] ?? -1);
+            ?>
+            <div class="rank-icon">
+                <img src="/assets/<?= $userRank['icon'] ?>" alt="<?= $userRank['name'] ?>" class="rank-image">
             </div>
-            
-            <?php if ($isOwnProfile): ?>
-            <button class="edit-profile-btn" onclick="openEditModal()">
-                <i class='bx bx-edit'></i>
-                Chỉnh sửa profile
-            </button>
-            <?php endif; ?>
+            <div class="rank-info">
+                <span class="rank-name"><?= $userRank['name'] ?></span>
+                <span class="rank-rating"><?= isset($viewingUser['rating']) && $viewingUser['rating'] != -1 ? $viewingUser['rating'] . ' CJP' : 'Chưa có xếp hạng' ?></span>
+            </div>
+        </div>
+        
+        <div class="profile-stats">
+            <div class="stat-item">
+                <span class="stat-number"><?= $viewingUser['total_problems_solved'] ?? 0 ?></span>
+                <span class="stat-label">Bài giải</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number"><?= $viewingUser['login_streak'] ?? 0 ?></span>
+                <span class="stat-label">Streak</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number"><?= count($userBadges) ?></span>
+                <span class="stat-label">Badges</span>
+            </div>
         </div>
     </div>
     
@@ -195,6 +199,24 @@ $content = ob_start();
                        placeholder="https://yourwebsite.com">
             </div>
             
+            <div class="form-group full-width">
+                <label>Ảnh đại diện</label>
+                <div class="avatar-edit-section">
+                    <div class="current-avatar">
+                        <img src="<?= AvatarHelper::base64ToImageSrc($viewingUser['avatar']) ?>" 
+                             alt="Current Avatar" id="currentAvatarPreview" class="current-avatar-image">
+                    </div>
+                    <div class="avatar-upload">
+                        <label for="avatar" class="file-upload-label">
+                            <i class='bx bx-camera'></i>
+                            Thay đổi ảnh đại diện
+                        </label>
+                        <input type="file" id="avatar" name="avatar" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onchange="previewAvatarInEdit(this)">
+                        <small class="file-info">Chấp nhận: JPG, PNG, GIF, WebP. Tối đa 2MB.</small>
+                    </div>
+                </div>
+            </div>
+            
             <div class="form-actions">
                 <button type="button" class="btn-secondary" onclick="closeEditModal()">Hủy</button>
                 <button type="submit" class="btn-primary">Lưu thay đổi</button>
@@ -273,6 +295,33 @@ function previewAvatar(input) {
         reader.onload = function(e) {
             document.getElementById('avatarPreview').src = e.target.result;
             showNotification('success', 'Ảnh hợp lệ! Bạn có thể cập nhật ảnh đại diện.');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function previewAvatarInEdit(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showNotification('error', 'Chỉ chấp nhận file ảnh với định dạng JPG, PNG, GIF, WebP!');
+            input.value = '';
+            return;
+        }
+        
+        const maxSize = 2048000;
+        if (file.size > maxSize) {
+            showNotification('error', 'File ảnh quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('currentAvatarPreview').src = e.target.result;
+            showNotification('success', 'Ảnh hợp lệ! Sẽ được cập nhật khi lưu thay đổi.');
         };
         reader.readAsDataURL(file);
     }

@@ -615,6 +615,165 @@ $TYPE_PROBLEM = [
     ]
 ];
 
+$RANKING = [
+    "Unranked" => [
+        "name" => "Chưa Xếp Hạng",
+        "start_point" => -100000000000000,
+        "end_point" => -1,
+        "icon" => "rank_Unranked.png"
+    ],
+    "Iron_1" => [
+        "name" => "Sắt 1",
+        "start_point" => 0,
+        "end_point" => 200,
+        "icon" => "rank_Iron_1.png"
+    ],
+    "Iron_2" => [
+        "name" => "Sắt 2",
+        "start_point" => 201,
+        "end_point" => 400,
+        "icon" => "rank_Iron_2.png"
+    ],
+    "Iron_3" => [
+        "name" => "Sắt 3",
+        "start_point" => 401,
+        "end_point" => 600,
+        "icon" => "rank_Iron_3.png"
+    ],
+    "Bronze_1" => [
+        "name" => "Đồng 1",
+        "start_point" => 0,
+        "end_point" => 600,
+        "icon" => "rank_Bronze_1.png"
+    ],
+    "Bronze_2" => [
+        "name" => "Đồng 2",
+        "start_point" => 601,
+        "end_point" => 1200,
+        "icon" => "rank_Bronze_2.png"
+    ],
+    "Bronze_3" => [
+        "name" => "Đồng 3",
+        "start_point" => 1201,
+        "end_point" => 1800,
+        "icon" => "rank_Bronze_3.png"
+    ],
+    "Silver_1" => [
+        "name" => "Bạc 1",
+        "start_point" => 601,
+        "end_point" => 800,
+        "icon" => "rank_Silver_1.png"
+    ],
+    "Silver_2" => [
+        "name" => "Bạc 2",
+        "start_point" => 801,
+        "end_point" => 1000,
+        "icon" => "rank_Silver_2.png"
+    ],
+    "Silver_3" => [
+        "name" => "Bạc 3",
+        "start_point" => 1001,
+        "end_point" => 1200,
+        "icon" => "rank_Silver_3.png"
+    ],
+    "Gold_1" => [
+        "name" => "Vàng 1",
+        "start_point" => 1201,
+        "end_point" => 1400,
+        "icon" => "rank_Gold_1.png"
+    ],
+    "Gold_2" => [
+        "name" => "Vàng 2",
+        "start_point" => 1401,
+        "end_point" => 1600,
+        "icon" => "rank_Gold_2.png"
+    ],
+    "Gold_3" => [
+        "name" => "Vàng 3",
+        "start_point" => 1601,
+        "end_point" => 1800,
+        "icon" => "rank_Gold_3.png"
+    ],
+    "Platinum_1"=> [
+        "name"=> "Bạch Kim 1",
+        "start_point" => 1801,
+        "end_point" => 2000,
+        "icon" => "rank_Platinum_1.png"
+    ],
+    "Platinum_2"=> [
+        "name"=> "Bạch Kim 2",
+        "start_point" => 2001,
+        "end_point" => 2200,
+        "icon" => "rank_Platinum_2.png"
+    ],
+    "Platinum_3"=> [
+        "name"=> "Bạch Kim 3",
+        "start_point" => 2201,
+        "end_point" => 2400,
+        "icon" => "rank_Platinum_3.png"
+    ],
+    "Diamond_1"=> [
+        "name"=> "Kim Cương 1",
+        "start_point" => 2401,
+        "end_point" => 2600,
+        "icon" => "rank_Diamond_1.png"
+    ],
+    "Diamond_2"=> [
+        "name"=> "Kim Cương 2",
+        "start_point" => 2601,
+        "end_point" => 2800,
+        "icon" => "rank_Diamond_2.png"
+    ],
+    "Diamond_3"=> [
+        "name"=> "Kim Cương 3",
+        "start_point" => 2801,
+        "end_point" => 3000,
+        "icon" => "rank_Diamond_3.png"
+    ],
+    "Ascendant_1"=> [
+        "name"=> "Lục Bảo 1",
+        "start_point" => 3001,
+        "end_point" => 3200,
+        "icon" => "rank_Ascendant_1.png"
+    ],
+    "Ascendant_2"=> [
+        "name"=> "Lục Bảo 2",
+        "start_point" => 3201,
+        "end_point" => 3400,
+        "icon" => "rank_Ascendant_2.png"
+    ],
+    "Ascendant_3"=> [
+        "name"=> "Lục Bảo 3",
+        "start_point" => 3401,
+        "end_point" => 3600,
+        "icon" => "rank_Ascendant_3.png"
+    ],
+    "Immortal_1"=> [
+        "name"=> "Cao Thủ 1",
+        "start_point" => 3601,
+        "end_point" => 3800,
+        "icon" => "rank_Immortal_1.png"
+    ],
+    "Immortal_2"=> [
+        "name"=> "Cao Thủ 2",
+        "start_point" => 3801,
+        "end_point" => 4000,
+        "icon" => "rank_Immortal_2.png"
+    ],
+    "Immortal_3"=> [
+        "name"=> "Cao Thủ 3",
+        "start_point" => 4001,
+        "end_point" => 4200,
+        "icon" => "rank_Immortal_3.png"
+    ],
+    "Radiant" => [
+        "name" => "Đại Nhân",
+        "start_point" => 4201,
+        "end_point" => 100000000000000,
+        "icon" => "rank_Radiant.png"
+    ],
+];
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
