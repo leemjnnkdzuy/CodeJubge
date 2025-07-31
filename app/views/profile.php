@@ -1,0 +1,520 @@
+<?php 
+// Xác định xem đang xem profile của ai
+$viewingUser = isset($profileUser) ? $profileUser : $currentUser;
+$isOwnProfile = isset($isOwnProfile) ? $isOwnProfile : true;
+
+if (!$viewingUser) {
+    header('Location: /login');
+    exit;
+}
+
+$content = ob_start(); 
+?>
+
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="profile-avatar-section">
+            <div class="avatar-container">
+                <img src="<?= AvatarHelper::base64ToImageSrc($viewingUser['avatar']) ?>" 
+                     alt="Avatar" class="profile-avatar">
+                <?php if ($isOwnProfile): ?>
+                <button class="avatar-edit-btn" onclick="openAvatarModal()">
+                    <i class='bx bx-camera'></i>
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <div class="profile-info">
+            <h1 class="profile-name">
+                <?= htmlspecialchars($viewingUser['first_name'] . ' ' . $viewingUser['last_name']) ?>
+            </h1>
+            <p class="profile-username">@<?= htmlspecialchars($viewingUser['username']) ?></p>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-number"><?= isset($viewingUser['rating']) && $viewingUser['rating'] != -1 ? $viewingUser['rating'] : 'Chưa có xếp hạng' ?></span>
+                    <span class="stat-label">Rating</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number"><?= $viewingUser['total_problems_solved'] ?? 0 ?></span>
+                    <span class="stat-label">Bài giải</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number"><?= $viewingUser['login_streak'] ?? 0 ?></span>
+                    <span class="stat-label">Streak</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number"><?= count($userBadges) ?></span>
+                    <span class="stat-label">Badges</span>
+                </div>
+            </div>
+            
+            <?php if ($isOwnProfile): ?>
+            <button class="edit-profile-btn" onclick="openEditModal()">
+                <i class='bx bx-edit'></i>
+                Chỉnh sửa profile
+            </button>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Profile Content -->
+    <div class="profile-content">
+        <!-- Bio Section -->
+        <div class="profile-section">
+            <h2 class="section-title">Giới thiệu</h2>
+            <div class="bio-content">
+                <?php if (!empty($viewingUser['bio'])): ?>
+                    <p><?= nl2br(htmlspecialchars($viewingUser['bio'])) ?></p>
+                <?php else: ?>
+                    <p class="no-content">
+                        <?= $isOwnProfile ? 'Bạn chưa có giới thiệu. Hãy thêm vào!' : 'Người dùng này chưa có giới thiệu.' ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- Links Section -->
+        <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url'])): ?>
+        <div class="profile-section">
+            <h2 class="section-title">Liên kết</h2>
+            <div class="links-container">
+                <?php if (!empty($viewingUser['github_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['github_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-github'></i>
+                    <span>GitHub</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['linkedin_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['linkedin_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-linkedin'></i>
+                    <span>LinkedIn</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['website_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['website_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bx-link'></i>
+                    <span>Website</span>
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Badges Section -->
+        <div class="profile-section">
+            <h2 class="section-title">Huy hiệu & Thành tích</h2>
+            <div class="badges-grid">
+                <?php 
+                global $BADGES;
+                $earnedCount = 0;
+                
+                foreach ($BADGES as $badgeKey => $badge): 
+                    $isEarned = in_array($badgeKey, $userBadges);
+                    if ($isEarned) $earnedCount++;
+                    $badgeClass = $isEarned ? 'earned' : 'unearned';
+                    $assetPath = '/assets/' . $badge['File'];
+                ?>
+                <div class="badge-item <?= $badgeClass ?>" title="<?= htmlspecialchars($badge['description']) ?>">
+                    <img src="<?= $assetPath ?>" alt="<?= htmlspecialchars($badge['title']) ?>" class="badge-icon">
+                    <span class="badge-title"><?= htmlspecialchars($badge['title']) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <?php if ($earnedCount === 0): ?>
+            <p class="no-content">
+                <?= $isOwnProfile ? 'Bạn chưa có huy hiệu nào. Hãy hoàn thành các thử thách!' : 'Người dùng này chưa có huy hiệu nào.' ?>
+            </p>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Activity Timeline (Future feature) -->
+        <div class="profile-section">
+            <h2 class="section-title">Hoạt động gần đây</h2>
+            <div class="activity-timeline">
+                <p class="no-content">Tính năng này sẽ được phát triển trong tương lai.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<?php if ($isOwnProfile): ?>
+<div class="modal" id="editProfileModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Chỉnh sửa thông tin cá nhân</h2>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        
+        <form class="edit-form" action="/profile/update" method="POST" enctype="multipart/form-data" onsubmit="debugFormSubmit(this)">
+            <div class="form-group">
+                <label for="first_name">Tên</label>
+                <input type="text" id="first_name" name="first_name" 
+                       value="<?= htmlspecialchars($viewingUser['first_name']) ?>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="last_name">Họ</label>
+                <input type="text" id="last_name" name="last_name" 
+                       value="<?= htmlspecialchars($viewingUser['last_name']) ?>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" 
+                       value="<?= htmlspecialchars($viewingUser['username']) ?>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" 
+                       value="<?= htmlspecialchars($viewingUser['email']) ?>" required>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="bio">Giới thiệu</label>
+                <textarea id="bio" name="bio" rows="3" placeholder="Viết vài dòng về bản thân..."><?= htmlspecialchars($viewingUser['bio'] ?? '') ?></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="github_url">GitHub URL</label>
+                <input type="url" id="github_url" name="github_url" 
+                       value="<?= htmlspecialchars($viewingUser['github_url'] ?? '') ?>" 
+                       placeholder="https://github.com/username">
+            </div>
+            
+            <div class="form-group">
+                <label for="linkedin_url">LinkedIn URL</label>
+                <input type="url" id="linkedin_url" name="linkedin_url" 
+                       value="<?= htmlspecialchars($viewingUser['linkedin_url'] ?? '') ?>" 
+                       placeholder="https://linkedin.com/in/username">
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="website_url">Website URL</label>
+                <input type="url" id="website_url" name="website_url" 
+                       value="<?= htmlspecialchars($viewingUser['website_url'] ?? '') ?>" 
+                       placeholder="https://yourwebsite.com">
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="closeEditModal()">Hủy</button>
+                <button type="submit" class="btn-primary">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Avatar Upload Modal -->
+<div class="modal" id="avatarModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Thay đổi ảnh đại diện</h2>
+            <button class="modal-close" onclick="closeAvatarModal()">&times;</button>
+        </div>
+        
+        <form class="avatar-form" action="/profile/update" method="POST" enctype="multipart/form-data" onsubmit="return validateAvatarForm(this)">
+            <div class="avatar-preview">
+                <img src="<?= AvatarHelper::base64ToImageSrc($viewingUser['avatar']) ?>" 
+                     alt="Preview" id="avatarPreview" class="preview-image">
+            </div>
+            
+            <div class="form-group">
+                <label for="avatar" class="file-upload-label">
+                    <i class='bx bx-upload'></i>
+                    Chọn ảnh mới
+                </label>
+                <input type="file" id="avatar" name="avatar" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onchange="previewAvatar(this)" required>
+                <small class="file-info">Chấp nhận: JPG, PNG, GIF, WebP. Tối đa 2MB.</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="closeAvatarModal()">Hủy</button>
+                <button type="submit" class="btn-primary">Cập nhật ảnh</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+// Modal functions
+function openEditModal() {
+    document.getElementById('editProfileModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editProfileModal').style.display = 'none';
+}
+
+function openAvatarModal() {
+    document.getElementById('avatarModal').style.display = 'flex';
+}
+
+function closeAvatarModal() {
+    document.getElementById('avatarModal').style.display = 'none';
+}
+
+// Avatar preview
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Kiểm tra định dạng file
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showNotification('error', 'Chỉ chấp nhận file ảnh với định dạng JPG, PNG, GIF, WebP!');
+            input.value = ''; // Reset input
+            return;
+        }
+        
+        // Kiểm tra kích thước file (2MB = 2048000 bytes)
+        const maxSize = 2048000; // 2MB
+        if (file.size > maxSize) {
+            showNotification('error', 'File ảnh quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
+            input.value = ''; // Reset input
+            return;
+        }
+        
+        // Nếu validation pass, hiển thị preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatarPreview').src = e.target.result;
+            showNotification('success', 'Ảnh hợp lệ! Bạn có thể cập nhật ảnh đại diện.');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Debug form submission
+function debugFormSubmit(form) {
+    console.log('Form being submitted:');
+    const formData = new FormData(form);
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+    }
+    showNotification('info', 'Đang cập nhật thông tin...');
+    return true;
+}
+
+// Validate avatar form before submit
+function validateAvatarForm(form) {
+    const fileInput = form.querySelector('#avatar');
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        showNotification('error', 'Vui lòng chọn một file ảnh!');
+        return false;
+    }
+    
+    const file = fileInput.files[0];
+    
+    // Kiểm tra định dạng file
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        showNotification('error', 'Định dạng file không được hỗ trợ! Chỉ chấp nhận JPG, PNG, GIF, WebP.');
+        return false;
+    }
+    
+    // Kiểm tra kích thước file
+    const maxSize = 2048000; // 2MB
+    if (file.size > maxSize) {
+        showNotification('error', 'File quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
+        return false;
+    }
+    
+    // Hiển thị loading notification
+    showNotification('info', 'Đang tải ảnh lên...');
+    return true;
+}
+
+// Show notification function (sử dụng popup notification component)
+function showNotification(type, message) {
+    // Remove existing notification if any
+    const existing = document.getElementById('popupNotification');
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.id = 'popupNotification';
+    notification.className = `popup-notification ${type}`;
+    
+    let icon = '';
+    switch(type) {
+        case 'success':
+            icon = '<i class="bx bx-check-circle"></i>';
+            break;
+        case 'error':
+            icon = '<i class="bx bx-error-circle"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="bx bx-error"></i>';
+            break;
+        default:
+            icon = '<i class="bx bx-info-circle"></i>';
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">
+                ${icon}
+            </div>
+            <div class="notification-message">
+                ${message}
+            </div>
+            <button class="notification-close" onclick="closeNotification()">
+                <i class='bx bx-x'></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto hide after 5 seconds (except for loading)
+    if (type !== 'info') {
+        setTimeout(() => {
+            closeNotification();
+        }, 5000);
+    }
+}
+
+// Close notification function
+function closeNotification() {
+    const notification = document.getElementById('popupNotification');
+    if (notification) {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+});
+</script>
+
+<style>
+/* Popup Notification Styles */
+.popup-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+    min-width: 300px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease-in-out;
+    font-family: 'Inter Tight', sans-serif;
+}
+
+.popup-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: white;
+    border-left: 4px solid;
+}
+
+.popup-notification.success .notification-content {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+}
+
+.popup-notification.error .notification-content {
+    border-left-color: #ef4444;
+    background: #fef2f2;
+}
+
+.popup-notification.warning .notification-content {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.popup-notification.info .notification-content {
+    border-left-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.notification-icon {
+    margin-right: 12px;
+    font-size: 20px;
+}
+
+.popup-notification.success .notification-icon {
+    color: #10b981;
+}
+
+.popup-notification.error .notification-icon {
+    color: #ef4444;
+}
+
+.popup-notification.warning .notification-icon {
+    color: #f59e0b;
+}
+
+.popup-notification.info .notification-icon {
+    color: #3b82f6;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    line-height: 1.4;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.notification-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 480px) {
+    .popup-notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        min-width: auto;
+    }
+}
+</style>
+
+<?php 
+$content = ob_get_clean();
+include VIEW_PATH . '/layouts/pagesWithSidebar.php';
+?>

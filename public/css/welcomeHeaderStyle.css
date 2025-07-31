@@ -1,0 +1,241 @@
+.welcome-header * {
+	box-sizing: border-box;
+}
+
+.welcome-header {
+	background: white;
+	border-bottom: 1px solid #e9ecef;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	height: 80px;
+}
+
+.welcome-navbar {
+	padding: 1rem 0;
+	height: 100%;
+}
+
+.welcome-navbar .container {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 2rem;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 1rem;
+}
+
+.navbar-logo {
+	flex-shrink: 0;
+}
+
+.logo-link {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	text-decoration: none;
+}
+
+.logo-icon {
+	font-size: 1.8rem;
+}
+
+.logo-text {
+	font-family: "Dosis", sans-serif;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--primary-blue);
+}
+
+.navbar-nav {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+	flex: 1;
+	margin-left: 2rem;
+}
+
+.nav-item {
+	color: #6c757d;
+	text-decoration: none;
+	font-weight: 500;
+	padding: 0.5rem 1rem;
+	border-radius: 6px;
+}
+
+.nav-item:hover {
+	color: var(--primary-blue);
+	background: #f8f9fa;
+}
+
+.navbar-search {
+	flex: 0 0 320px;
+}
+
+.search-container {
+	position: relative;
+}
+
+.search-input {
+	width: 100%;
+	padding: 0.5rem 1rem;
+	padding-right: 2.5rem;
+	border: 2px solid #e9ecef;
+	border-radius: 32px;
+	outline: none;
+	font-size: 0.85rem;
+	font-weight: 500;
+	background: #f8f9fa;
+	transition: all 0.3s ease;
+	height: 36px;
+	box-sizing: border-box;
+}
+
+.search-input:focus {
+	border-color: var(--primary-blue);
+	background: white;
+	box-shadow: 0 8px 25px rgba(32, 190, 255, 0.15);
+}
+
+.search-input::placeholder {
+	color: #adb5bd;
+	font-weight: 400;
+}
+
+.search-btn {
+	position: absolute;
+	right: 4px;
+	top: 50%;
+	transform: translateY(-50%);
+	background: transparent;
+	border: none;
+	border-radius: 50%;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--primary-blue);
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+	background: rgba(32, 190, 255, 0.1);
+	transform: translateY(-50%) scale(1.05);
+	color: var(--primary-blue-dark);
+}
+
+.navbar-auth {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-shrink: 0;
+}
+
+.auth-btn {
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 0.85rem;
+	padding: 0.5rem 1.5rem;
+	border-radius: 32px;
+	border: 2px solid transparent;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	height: 36px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.login-btn {
+	color: var(--primary-blue);
+	border-color: var(--primary-blue);
+	background: transparent;
+}
+
+.login-btn:hover {
+	background: var(--primary-blue);
+	color: white;
+	box-shadow: 0 8px 25px rgba(32, 190, 255, 0.3);
+}
+
+.signup-btn {
+	background: var(--primary-blue);
+	color: white;
+	border-color: var(--primary-blue);
+}
+
+.signup-btn:hover {
+	background: var(--primary-blue-dark);
+	border-color: var(--primary-blue-dark);
+	color: white;
+	box-shadow: 0 8px 25px rgba(32, 190, 255, 0.3);
+}
+
+.profile-btn {
+	color: #6c757d;
+	background: #f8f9fa;
+	border-color: #dee2e6;
+}
+
+.profile-btn:hover {
+	background: var(--primary-blue);
+	color: white;
+	border-color: var(--primary-blue);
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(32, 190, 255, 0.3);
+}
+
+.logout-btn {
+	color: #dc3545;
+	border-color: #dc3545;
+}
+
+.logout-btn:hover {
+	background: #dc3545;
+	color: white;
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+}
+
+.mobile-menu-toggle {
+	display: none;
+	flex-direction: column;
+	cursor: pointer;
+	padding: 0.5rem;
+}
+
+.mobile-menu-toggle span {
+	width: 24px;
+	height: 3px;
+	background: #6c757d;
+	margin: 2px 0;
+	border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+	.navbar-nav,
+	.navbar-search {
+		display: none;
+	}
+
+	.mobile-menu-toggle {
+		display: flex;
+	}
+
+	.auth-btn {
+		padding: 0.45rem 1.2rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+
+	.navbar-auth {
+		gap: 0.75rem;
+	}
+}
