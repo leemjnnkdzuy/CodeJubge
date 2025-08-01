@@ -265,5 +265,10 @@ class pagesController extends Controller
     {
         include VIEW_PATH . '/languages.php';
     }
+
+    public function leaderboard()
+    {
+        include VIEW_PATH . '/leaderboard.php';
+    }
 }
 ?>

@@ -119,7 +119,7 @@ class UserModel
         }
     }
 
-    public function getUserById($userId)
+    public function getUserById($userId): ?array
     {
         try {
             $query = "SELECT * FROM {$this->table} WHERE id = :id AND is_active = 1";
@@ -136,7 +136,7 @@ class UserModel
         }
     }
     
-    public function updateUser($userId, $userData)
+    public function updateUser($userId, $userData): array
     {
         try {
             error_log("UserModel::updateUser - UserID: $userId");
@@ -209,7 +209,7 @@ class UserModel
         }
     }
 
-    public function changePassword($userId, $currentPassword, $newPassword)
+    public function changePassword($userId, $currentPassword, $newPassword): array
     {
         try {
             $user = $this->getUserById($userId);
@@ -471,7 +471,7 @@ class UserModel
         return substr(str_shuffle($chars), 0, $length);
     }
     
-    public function getUserBadges($userId)
+    public function getUserBadges($userId): array
     {
         try {
             $query = "SELECT badges FROM {$this->table} WHERE id = :id";
@@ -486,7 +486,7 @@ class UserModel
         }
     }
     
-    public function addBadgeToUser($userId, $badgeKey)
+    public function addBadgeToUser($userId, $badgeKey): bool
     {
         try {
             $currentBadges = $this->getUserBadges($userId);
@@ -596,6 +596,164 @@ class UserModel
             return $result !== null;
         } catch (Exception $e) {
             return false;
+        }
+    }
+
+    public function getLeaderboard($limit = 50, $offset = 0, $rankFilter = 'all') {
+        try {
+            global $RANKING;
+            
+            $whereClause = "WHERE u.is_active = 1 AND u.role = 'user'";
+            $params = [];
+            
+            if ($rankFilter !== 'all' && isset($RANKING[$rankFilter])) {
+                $rank = $RANKING[$rankFilter];
+                
+                // Xử lý đặc biệt cho Unranked
+                if ($rankFilter === 'Unranked') {
+                    $whereClause .= " AND u.rating = -1";
+                } else {
+                    if ($rank['end_point'] != 100000000000000) {
+                        $whereClause .= " AND u.rating BETWEEN :start_point AND :end_point";
+                        $params['start_point'] = $rank['start_point'];
+                        $params['end_point'] = $rank['end_point'];
+                    } else {
+                        $whereClause .= " AND u.rating >= :start_point";
+                        $params['start_point'] = $rank['start_point'];
+                    }
+                }
+            }
+            
+            $query = "
+                SELECT 
+                    u.id,
+                    u.username,
+                    u.first_name,
+                    u.last_name,
+                    u.avatar,
+                    u.total_problems_solved,
+                    u.total_submissions,
+                    u.rating,
+                    u.badges,
+                    RANK() OVER (
+                        ORDER BY 
+                            u.total_problems_solved DESC, 
+                            CASE WHEN u.rating = -1 THEN 0 ELSE u.rating END DESC, 
+                            u.id ASC
+                    ) as user_rank
+                FROM {$this->table} u
+                {$whereClause}
+                ORDER BY 
+                    u.total_problems_solved DESC, 
+                    CASE WHEN u.rating = -1 THEN 0 ELSE u.rating END DESC, 
+                    u.id ASC
+                LIMIT :limit OFFSET :offset
+            ";
+            
+            $params['limit'] = $limit;
+            $params['offset'] = $offset;
+            
+            $results = $this->db->select($query, $params);
+            
+            $leaderboard = [];
+            foreach ($results as $index => $user) {
+                $leaderboard[] = [
+                    'rank' => $user['user_rank'] ?? ($offset + $index + 1),
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'full_name' => trim($user['first_name'] . ' ' . $user['last_name']),
+                    'avatar' => $user['avatar'],
+                    'problems_solved' => $user['total_problems_solved'],
+                    'total_submissions' => $user['total_submissions'],
+                    'rating' => $user['rating'],
+                    'badges' => $user['badges'] ? json_decode($user['badges'], true) : [],
+                    'rank_tier' => $this->getRankTierFromRating($user['rating'])
+                ];
+            }
+            
+            return $leaderboard;
+            
+        } catch (Exception $e) {
+            error_log("Error getting leaderboard: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getTotalActiveUsers() {
+        try {
+            $query = "SELECT COUNT(*) as total FROM {$this->table} WHERE is_active = 1 AND role = 'user'";
+            $result = $this->db->selectOne($query);
+            return $result['total'] ?? 0;
+        } catch (Exception $e) {
+            error_log("Error getting total active users: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    private function getRankTierFromRating($userRating) {
+        global $RANKING;
+        
+        // Xử lý đặc biệt cho rating -1 (unranked)
+        if ($userRating == -1) {
+            return 'Unranked';
+        }
+        
+        foreach ($RANKING as $key => $rank) {
+            if ($userRating >= $rank['start_point'] && $userRating <= $rank['end_point']) {
+                return $key;
+            }
+        }
+        
+        // Mặc định trả về Unranked nếu không tìm thấy
+        return 'Unranked';
+    }
+    
+    public function getRankTierStats() {
+        try {
+            global $RANKING;
+            
+            $cases = [];
+            $orderCases = [];
+            $i = 1;
+            
+            foreach ($RANKING as $key => $rank) {
+                if ($key === 'Unranked') {
+                    // Xử lý đặc biệt cho Unranked (rating = -1)
+                    $cases[] = "WHEN rating = -1 THEN '{$key}'";
+                } else if ($rank['end_point'] == 100000000000000) {
+                    $cases[] = "WHEN rating >= {$rank['start_point']} THEN '{$key}'";
+                } else {
+                    $cases[] = "WHEN rating BETWEEN {$rank['start_point']} AND {$rank['end_point']} THEN '{$key}'";
+                }
+                $orderCases[] = "WHEN '{$key}' THEN {$i}";
+                $i++;
+            }
+            
+            $casesSql = implode(' ', $cases);
+            $orderCasesSql = implode(' ', $orderCases);
+            
+            $query = "
+                SELECT 
+                    CASE 
+                        {$casesSql}
+                        ELSE 'Unranked'
+                    END as tier,
+                    COUNT(*) as count
+                FROM {$this->table}
+                WHERE is_active = 1 AND role = 'user'
+                GROUP BY tier
+                ORDER BY 
+                    CASE tier
+                        {$orderCasesSql}
+                        ELSE 999
+                    END
+            ";
+            
+            return $this->db->select($query);
+            
+        } catch (Exception $e) {
+            error_log("Error getting rank tier stats: " . $e->getMessage());
+            return [];
         }
     }
 }

@@ -136,6 +136,8 @@ class UserController extends Controller
             
             $recentSubmissions = $this->getRecentSubmissions($user['id'], 10);
             
+            $userBadges = $this->getUserBadges($user['id']);
+            
             $title = 'Hồ sơ - ' . $user['username'];
             $description = 'Hồ sơ của ' . $user['first_name'] . ' ' . $user['last_name'];
             
@@ -144,7 +146,8 @@ class UserController extends Controller
                 'description' => $description,
                 'user' => $user,
                 'stats' => $stats,
-                'recent_submissions' => $recentSubmissions
+                'recent_submissions' => $recentSubmissions,
+                'user_badges' => $userBadges
             ]);
             
         } catch (Exception $e) {
@@ -237,6 +240,37 @@ class UserController extends Controller
                 'user_id' => $userId,
                 'limit' => $limit
             ]);
+            
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+    
+    private function getUserBadges($userId)
+    {
+        try {
+            $badgeKeys = $this->userModel->getUserBadges($userId);
+            
+            if (!empty($badgeKeys)) {
+                require_once dirname(APP_PATH) . '/config/config.php';
+                global $BADGES;
+                
+                $userBadges = [];
+                foreach ($badgeKeys as $badgeId) {
+                    if (isset($BADGES[$badgeId])) {
+                        $userBadges[] = [
+                            'id' => $badgeId,
+                            'name' => $BADGES[$badgeId]['title'] ?? ucwords(str_replace('_', ' ', $badgeId)),
+                            'icon' => $BADGES[$badgeId]['File'] ?? 'default-badge.svg',
+                            'description' => $BADGES[$badgeId]['description'] ?? ''
+                        ];
+                    }
+                }
+                
+                return $userBadges;
+            }
+            
+            return [];
             
         } catch (Exception $e) {
             return [];

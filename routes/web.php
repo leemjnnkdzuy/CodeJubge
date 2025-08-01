@@ -35,7 +35,8 @@ $routes = [
     'profile/update' => 'ProfileController@update',
     'profile/(\d+)' => 'ProfileController@show',
     'profile/change-password' => 'UserController@changePassword',
-    'leaderboard' => 'UserController@leaderboard',
+    'leaderboard' => 'leaderboardController@index',
+    'leaderboard/api' => 'leaderboardController@api',
     'user/([a-zA-Z0-9_]+)' => 'UserController@viewProfile',
     
     // Admin routes

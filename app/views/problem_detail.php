@@ -2,10 +2,8 @@
 $title = htmlspecialchars($problem['title'] ?? 'Chi tiết bài tập - CodeJudge');
 $description = htmlspecialchars($problem['description'] ?? 'Giải quyết bài tập lập trình với CodeJudge');
 
-// Include config để có $SUPPORTED_LANGUAGES
 require_once ROOT_PATH . '/config/config.php';
 
-// Ensure $SUPPORTED_LANGUAGES is available
 if (!isset($SUPPORTED_LANGUAGES)) {
     $SUPPORTED_LANGUAGES = [
         'python' => [
@@ -31,15 +29,12 @@ if (!isset($SUPPORTED_LANGUAGES)) {
     ];
 }
 
-// Start content buffering
 ob_start();
 ?>
 
-<!-- Monaco Editor Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 
 <div class="problem-workspace">
-    <!-- Problem Description Panel -->
     <div class="problem-sidebar">
         <div class="problem-tabs">
             <div class="problem-tab active" data-tab="description">
@@ -57,9 +52,12 @@ ob_start();
         </div>
         
         <div class="problem-content">
-            <!-- Description Tab -->
             <div class="tab-content active" id="description-tab">
                 <div class="problem-header">
+                    <a href="/home" class="back-button">
+                        <i class="bx bx-arrow-back"></i>
+                        <span>Trở về</span>
+                    </a>
                     <h1 class="problem-title"><?= htmlspecialchars($problem['title']) ?></h1>
                     
                     <div class="problem-meta">
@@ -172,7 +170,6 @@ ob_start();
                 <?php endif; ?>
             </div>
             
-            <!-- Editorial Tab -->
             <div class="tab-content" id="editorial-tab">
                 <div class="problem-section">
                     <h2 class="section-title">
@@ -189,7 +186,6 @@ ob_start();
                 </div>
             </div>
             
-            <!-- Submissions Tab -->
             <div class="tab-content" id="submissions-tab">
                 <?php if (!empty($userSubmissions)): ?>
                 <div class="problem-section">
@@ -230,7 +226,6 @@ ob_start();
         </div>
     </div>
     
-    <!-- Code Editor Panel -->
     <div class="editor-panel">
         <div class="editor-header">
             <div class="editor-tabs">
@@ -285,12 +280,9 @@ ob_start();
     </div>
 </div>
 
-<!-- JavaScript -->
 <script>
-    // Language templates from PHP config
     const languageTemplates = <?= json_encode(array_map(function($lang) { return $lang['template']; }, $SUPPORTED_LANGUAGES)) ?>;
     
-    // Initialize Monaco Editor
     require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
     
     let editor;
@@ -309,22 +301,18 @@ ob_start();
         });
     });
     
-    // Tab switching functionality
     document.querySelectorAll('.problem-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const tabName = this.dataset.tab;
             
-            // Update active tab
             document.querySelectorAll('.problem-tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             
-            // Update active content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
         });
     });
     
-    // Language selector
     document.getElementById('languageSelect').addEventListener('change', function() {
         const language = this.value;
         const template = languageTemplates[language] || '';
@@ -335,7 +323,6 @@ ob_start();
         }
     });
     
-    // Run code functionality
     document.getElementById('runCode').addEventListener('click', function() {
         const code = editor.getValue();
         const language = document.getElementById('languageSelect').value;
@@ -345,12 +332,9 @@ ob_start();
             return;
         }
         
-        // Show loading
         const consoleOutput = document.getElementById('consoleOutput');
         consoleOutput.innerHTML = '<div class="console-message"><i class="bx bx-loader bx-spin"></i> Đang chạy code...</div>';
         
-        // TODO: Implement actual code execution API call
-        // For now, simulate execution
         setTimeout(() => {
             consoleOutput.innerHTML = `
                 <div class="test-case">
@@ -368,7 +352,6 @@ ob_start();
         }, 1500);
     });
     
-    // Submit code functionality
     document.getElementById('submitCode').addEventListener('click', function() {
         const code = editor.getValue();
         const language = document.getElementById('languageSelect').value;
@@ -379,10 +362,8 @@ ob_start();
         }
         
         if (confirm('Bạn có chắc chắn muốn nộp bài này?')) {
-            // TODO: Implement submission logic here
             console.log('Submitting code:', { code, language });
             
-            // Show success message
             const consoleOutput = document.getElementById('consoleOutput');
             consoleOutput.innerHTML = `
                 <div class="console-message" style="background: #d4edda; color: #155724;">
@@ -393,7 +374,6 @@ ob_start();
         }
     });
     
-    // Clear console
     document.getElementById('clearConsole').addEventListener('click', function() {
         document.getElementById('consoleOutput').innerHTML = `
             <div class="console-message">
@@ -405,7 +385,6 @@ ob_start();
 </script>
 
 <?php
-// Capture content and include layout
 $content = ob_get_clean();
 include VIEW_PATH . '/layouts/pagesNothing.php';
 ?>

@@ -12,10 +12,21 @@
     $current_page = basename($_SERVER['REQUEST_URI']);
     if (strpos($_SERVER['REQUEST_URI'], '/profile') === 0) {
         echo '<link rel="stylesheet" href="/css/profileStyle.css">';
+    } elseif (strpos($_SERVER['REQUEST_URI'], '/user/') === 0) {
+        echo '<link rel="stylesheet" href="/css/userProfileStyle.css">';
     } elseif (strpos($_SERVER['REQUEST_URI'], '/problems') === 0) {
         echo '<link rel="stylesheet" href="/css/problemsStyle.css">';
-    } else {
+    }elseif (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0) {
+        echo ' <link rel="stylesheet" href="/css/leaderboardStyle.css">';
+    } 
+    else {
         echo '<link rel="stylesheet" href="/css/homeStyle.css">';
+    }
+    
+    if (isset($additionalCSS) && is_array($additionalCSS)) {
+        foreach ($additionalCSS as $cssFile) {
+            echo '<link rel="stylesheet" href="' . htmlspecialchars($cssFile) . '">';
+        }
     }
     ?>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -52,6 +63,9 @@
     </div>
 
     <script src="js/sidebar.js"></script>
+    <?php if (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0): ?>
+        <script src="js/leaderboard.js"></script>
+    <?php endif; ?>
     <script>
         function checkScreenSize() {
             const sidebar = document.getElementById('sidebar');
