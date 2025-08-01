@@ -16,7 +16,9 @@
         echo '<link rel="stylesheet" href="/css/userProfileStyle.css">';
     } elseif (strpos($_SERVER['REQUEST_URI'], '/problems') === 0) {
         echo '<link rel="stylesheet" href="/css/problemsStyle.css">';
-    }elseif (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0) {
+    } elseif (strpos($_SERVER['REQUEST_URI'], '/discussions') === 0) {
+        echo '<link rel="stylesheet" href="/css/discussionsStyle.css">';
+    } elseif (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0) {
         echo ' <link rel="stylesheet" href="/css/leaderboardStyle.css">';
     } 
     else {

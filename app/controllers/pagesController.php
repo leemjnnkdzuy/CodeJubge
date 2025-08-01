@@ -270,5 +270,10 @@ class pagesController extends Controller
     {
         include VIEW_PATH . '/leaderboard.php';
     }
+    
+    public function discussions()
+    {
+        include VIEW_PATH . '/discussions.php';
+    }
 }
 ?>

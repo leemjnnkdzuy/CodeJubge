@@ -523,6 +523,335 @@ CREATE INDEX idx_submissions_user_problem ON submissions(user_id, problem_id);
 CREATE INDEX idx_submissions_status_time ON submissions(status, submitted_at);
 
 -- ==================================================
+-- BẢNG DISCUSSIONS - Quản lý thảo luận
+-- ==================================================
+CREATE TABLE `discussions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(255) NOT NULL,
+    `slug` VARCHAR(255) NOT NULL UNIQUE,
+    `content` TEXT NOT NULL,
+    `author_id` INT NOT NULL,
+    `category` ENUM('general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help') DEFAULT 'general',
+    `tags` JSON NOT NULL DEFAULT '[]',
+    `is_pinned` BOOLEAN DEFAULT FALSE,
+    `is_solved` BOOLEAN DEFAULT FALSE,
+    `is_locked` BOOLEAN DEFAULT FALSE,
+    `likes_count` INT DEFAULT 0,
+    `replies_count` INT DEFAULT 0,
+    `last_reply_at` TIMESTAMP NULL,
+    `last_reply_by` INT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`last_reply_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+    INDEX `idx_author_id` (`author_id`),
+    INDEX `idx_category` (`category`),
+    INDEX `idx_is_pinned` (`is_pinned`),
+    INDEX `idx_is_solved` (`is_solved`),
+    INDEX `idx_created_at` (`created_at`),
+    INDEX `idx_last_reply_at` (`last_reply_at`),
+    INDEX `idx_likes_count` (`likes_count`),
+    FULLTEXT INDEX `idx_search_discussions` (`title`, `content`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG DISCUSSION_REPLIES - Phản hồi thảo luận
+-- ==================================================
+CREATE TABLE `discussion_replies` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `discussion_id` INT NOT NULL,
+    `parent_id` INT NULL,
+    `author_id` INT NOT NULL,
+    `content` TEXT NOT NULL,
+    `is_solution` BOOLEAN DEFAULT FALSE,
+    `likes_count` INT DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (`discussion_id`) REFERENCES `discussions`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`parent_id`) REFERENCES `discussion_replies`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    INDEX `idx_discussion_id` (`discussion_id`),
+    INDEX `idx_parent_id` (`parent_id`),
+    INDEX `idx_author_id` (`author_id`),
+    INDEX `idx_created_at` (`created_at`),
+    INDEX `idx_is_solution` (`is_solution`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG DISCUSSION_LIKES - Lượt thích thảo luận
+-- ==================================================
+CREATE TABLE `discussion_likes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `discussion_id` INT NULL,
+    `reply_id` INT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY `unique_discussion_like` (`user_id`, `discussion_id`),
+    UNIQUE KEY `unique_reply_like` (`user_id`, `reply_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`discussion_id`) REFERENCES `discussions`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`reply_id`) REFERENCES `discussion_replies`(`id`) ON DELETE CASCADE,
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_discussion_id` (`discussion_id`),
+    INDEX `idx_reply_id` (`reply_id`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG DISCUSSION_BOOKMARKS - Bookmark thảo luận
+-- ==================================================
+CREATE TABLE `discussion_bookmarks` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `discussion_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY `unique_discussion_bookmark` (`user_id`, `discussion_id`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`discussion_id`) REFERENCES `discussions`(`id`) ON DELETE CASCADE,
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_discussion_id` (`discussion_id`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- STORED PROCEDURES CHO DISCUSSIONS
+-- ==================================================
+
+DELIMITER //
+
+-- Procedure tạo thảo luận mới
+CREATE PROCEDURE CreateDiscussion(
+    IN p_title VARCHAR(255),
+    IN p_slug VARCHAR(255),
+    IN p_content TEXT,
+    IN p_author_id INT,
+    IN p_category VARCHAR(50),
+    IN p_tags JSON
+)
+BEGIN
+    INSERT INTO discussions (title, slug, content, author_id, category, tags)
+    VALUES (p_title, p_slug, p_content, p_author_id, p_category, p_tags);
+    
+    SELECT LAST_INSERT_ID() as discussion_id;
+END //
+
+-- Procedure cập nhật thống kê khi có reply mới
+CREATE PROCEDURE AddDiscussionReply(
+    IN p_discussion_id INT,
+    IN p_parent_id INT,
+    IN p_author_id INT,
+    IN p_content TEXT
+)
+BEGIN
+    DECLARE reply_id INT;
+    
+    INSERT INTO discussion_replies (discussion_id, parent_id, author_id, content)
+    VALUES (p_discussion_id, p_parent_id, p_author_id, p_content);
+    
+    SET reply_id = LAST_INSERT_ID();
+    
+    UPDATE discussions SET 
+        replies_count = replies_count + 1,
+        last_reply_at = NOW(),
+        last_reply_by = p_author_id
+    WHERE id = p_discussion_id;
+    
+    SELECT reply_id;
+END //
+
+-- Procedure toggle like thảo luận
+CREATE PROCEDURE ToggleDiscussionLike(
+    IN p_user_id INT,
+    IN p_discussion_id INT
+)
+BEGIN
+    DECLARE like_exists INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO like_exists
+    FROM discussion_likes
+    WHERE user_id = p_user_id AND discussion_id = p_discussion_id;
+    
+    IF like_exists > 0 THEN
+        DELETE FROM discussion_likes 
+        WHERE user_id = p_user_id AND discussion_id = p_discussion_id;
+        
+        UPDATE discussions SET likes_count = likes_count - 1 WHERE id = p_discussion_id;
+        SELECT 'unliked' as action;
+    ELSE
+        INSERT INTO discussion_likes (user_id, discussion_id) 
+        VALUES (p_user_id, p_discussion_id);
+        
+        UPDATE discussions SET likes_count = likes_count + 1 WHERE id = p_discussion_id;
+        SELECT 'liked' as action;
+    END IF;
+END //
+
+DELIMITER ;
+
+-- ==================================================
+-- VIEWS CHO DISCUSSIONS
+-- ==================================================
+
+-- View discussions với thông tin tác giả
+CREATE VIEW discussions_with_author AS
+SELECT 
+    d.id,
+    d.title,
+    d.slug,
+    d.content,
+    d.category,
+    d.tags,
+    d.is_pinned,
+    d.is_solved,
+    d.likes_count,
+    d.replies_count,
+    d.created_at,
+    d.updated_at,
+    d.last_reply_at,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.avatar,
+    u.badges,
+    lr.username as last_reply_username
+FROM discussions d
+INNER JOIN users u ON d.author_id = u.id
+LEFT JOIN users lr ON d.last_reply_by = lr.id
+WHERE u.is_active = 1;
+
+-- View top discussions
+CREATE VIEW top_discussions AS
+SELECT 
+    d.*,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.avatar,
+    (d.likes_count * 2 + d.replies_count) as popularity_score
+FROM discussions d
+INNER JOIN users u ON d.author_id = u.id
+WHERE u.is_active = 1
+ORDER BY popularity_score DESC;
+
+-- ==================================================
+-- TRIGGERS CHO DISCUSSIONS
+-- ==================================================
+
+DELIMITER //
+
+-- Trigger cập nhật thống kê khi xóa reply
+CREATE TRIGGER discussion_reply_delete_trigger
+    AFTER DELETE ON discussion_replies
+    FOR EACH ROW
+BEGIN
+    UPDATE discussions SET 
+        replies_count = replies_count - 1
+    WHERE id = OLD.discussion_id;
+END //
+
+-- Trigger cập nhật thống kê khi xóa like
+CREATE TRIGGER discussion_like_delete_trigger
+    AFTER DELETE ON discussion_likes
+    FOR EACH ROW
+BEGIN
+    IF OLD.discussion_id IS NOT NULL THEN
+        UPDATE discussions SET 
+            likes_count = likes_count - 1
+        WHERE id = OLD.discussion_id;
+    END IF;
+    
+    IF OLD.reply_id IS NOT NULL THEN
+        UPDATE discussion_replies SET 
+            likes_count = likes_count - 1
+        WHERE id = OLD.reply_id;
+    END IF;
+END //
+
+DELIMITER ;
+
+-- ==================================================
+-- DỮ LIỆU MẪU CHO DISCUSSIONS
+-- ==================================================
+
+-- Tạo một số thảo luận mẫu
+INSERT INTO discussions (title, slug, content, author_id, category, tags, is_pinned, likes_count, replies_count) VALUES
+(
+    'Chào mừng đến với diễn đàn CodeJudge!',
+    'welcome-to-codejudge-forum',
+    'Chào mừng các bạn đến với diễn đàn thảo luận của CodeJudge! Đây là nơi các bạn có thể thảo luận về các bài toán lập trình, chia sẻ kinh nghiệm và học hỏi lẫn nhau.\n\nMột số quy tắc cơ bản:\n1. Tôn trọng lẫn nhau\n2. Không spam\n3. Sử dụng tiêu đề mô tả rõ ràng\n4. Tag đúng category cho bài viết',
+    1,
+    'general',
+    '["announcement", "rules", "welcome"]',
+    TRUE,
+    25,
+    5
+),
+(
+    'Làm thế nào để tối ưu hóa thuật toán sắp xếp?',
+    'how-to-optimize-sorting-algorithms',
+    'Mình đang tìm hiểu về các thuật toán sắp xếp và muốn biết cách tối ưu hóa chúng. Hiện tại mình đang sử dụng Quick Sort nhưng trong một số trường hợp performance không được tốt lắm.\n\nCó ai có kinh nghiệm về việc này không? Chia sẻ với mình nhé!',
+    1,
+    'algorithm',
+    '["sorting", "optimization", "quicksort", "performance"]',
+    FALSE,
+    12,
+    8
+),
+(
+    'Binary Search Tree vs AVL Tree - Khi nào nên dùng?',
+    'bst-vs-avl-tree-when-to-use',
+    'Mình đang học về cấu trúc dữ liệu cây và băn khoăn không biết khi nào nên sử dụng BST thông thường và khi nào nên sử dụng AVL Tree.\n\nCó ai có thể giải thích rõ hơn về trade-offs giữa hai loại cây này không?',
+    1,
+    'data-structure',
+    '["binary-search-tree", "avl-tree", "balanced-tree", "data-structure"]',
+    FALSE,
+    8,
+    6
+),
+(
+    'Dynamic Programming - Những pattern cơ bản cần biết',
+    'dynamic-programming-basic-patterns',
+    'Mình vừa bắt đầu học Dynamic Programming và thấy có rất nhiều dạng bài khác nhau. Có ai có thể chia sẻ những pattern cơ bản nhất mà người mới học DP cần nắm vững không?\n\nCảm ơn mọi người!',
+    1,
+    'algorithm',
+    '["dynamic-programming", "patterns", "beginner", "tutorial"]',
+    FALSE,
+    18,
+    12
+),
+(
+    'Cách debug hiệu quả khi code thi đấu',
+    'effective-debugging-competitive-programming',
+    'Trong lúc thi đấu, việc debug code rất quan trọng nhưng cũng tốn thời gian. Mình muốn hỏi các cao thủ có tips gì để debug nhanh và hiệu quả không?\n\nShare kinh nghiệm với mình nhé!',
+    1,
+    'contest',
+    '["debugging", "competitive-programming", "tips", "contest"]',
+    FALSE,
+    15,
+    9
+);
+
+-- Tạo một số replies mẫu
+INSERT INTO discussion_replies (discussion_id, author_id, content) VALUES
+(1, 1, 'Cảm ơn admin đã tạo ra diễn đàn tuyệt vời này! Mình rất mong được học hỏi từ mọi người.'),
+(2, 1, 'Về Quick Sort, bạn có thể thử implement 3-way partitioning để xử lý trường hợp có nhiều phần tử trùng lặp. Ngoài ra, có thể kết hợp với Insertion Sort cho mảng nhỏ.'),
+(3, 1, 'BST thông thường đơn giản hơn và phù hợp khi dữ liệu insert theo thứ tự random. AVL Tree tốt hơn khi cần đảm bảo worst-case O(log n) cho tất cả operations.'),
+(4, 1, 'Một số pattern cơ bản: 1D DP (Fibonacci, Climbing Stairs), 2D DP (Grid problems), Subsequence DP (LCS, LIS). Bắt đầu từ những bài đơn giản nhé!'),
+(5, 1, 'Tip quan trọng nhất: test với các test case edge cases ngay từ đầu. Và luôn in ra intermediate results để check logic.');
+
+-- ==================================================
+-- INDEXES BỔ SUNG CHO DISCUSSIONS
+-- ==================================================
+
+-- Composite indexes cho queries thường dùng
+CREATE INDEX idx_discussions_category_created ON discussions(category, created_at DESC);
+CREATE INDEX idx_discussions_pinned_created ON discussions(is_pinned DESC, created_at DESC);
+CREATE INDEX idx_discussions_popularity ON discussions(likes_count DESC, replies_count DESC);
+CREATE INDEX idx_discussion_replies_discussion_created ON discussion_replies(discussion_id, created_at DESC);
+
+-- ==================================================
 -- HOÀN THÀNH
 -- ==================================================
 -- Database đã được tạo thành công với:
@@ -531,8 +860,11 @@ CREATE INDEX idx_submissions_status_time ON submissions(status, submitted_at);
 -- ✓ Bảng submissions và user_problems
 -- ✓ Bảng contests và participants
 -- ✓ Bảng sessions và notifications
+-- ✓ Bảng discussions và replies (MỚI)
+-- ✓ Bảng discussion_likes, views, bookmarks (MỚI)
 -- ✓ Admin user mặc định (admin/password)
--- ✓ Stored procedures cho cập nhật thống kê
--- ✓ Views cho leaderboard và statistics
--- ✓ Triggers tự động cập nhật timestamps
--- ✓ Indexes tối ưu performance
+-- ✓ Stored procedures cho cập nhật thống kê và discussions (MỚI)
+-- ✓ Views cho leaderboard, statistics và discussions (MỚI)
+-- ✓ Triggers tự động cập nhật timestamps và counters (MỚI)
+-- ✓ Indexes tối ưu performance cho discussions (MỚI)
+-- ✓ Dữ liệu mẫu cho discussions (MỚI)
