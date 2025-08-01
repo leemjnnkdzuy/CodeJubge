@@ -13,7 +13,7 @@
             <div class="navbar-nav">
                 <a href="/competitions" class="nav-item">Cuộc Thi</a>
                 <a href="/problems" class="nav-item">Bài Toán</a>
-                <a href="/submissions" class="nav-item">Bài Nộp</a>
+                <a href="/leaderboard" class="nav-item">Xếp Hạng</a>
             </div>
             
             <div class="navbar-search">

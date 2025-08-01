@@ -311,11 +311,6 @@ class UserModel
         }
     }
 
-    /**
-     * Lấy user theo email
-     * @param string $email User email
-     * @return array|null User data or null if not found
-     */
     public function getUserByEmail($email)
     {
         try {
@@ -407,7 +402,6 @@ class UserModel
             }
         }
         
-        // Validate email
         if (!filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
             return [
                 'valid' => false,
@@ -415,7 +409,6 @@ class UserModel
             ];
         }
         
-        // Validate password
         if (strlen($userData['password']) < 8) {
             return [
                 'valid' => false,
@@ -423,7 +416,6 @@ class UserModel
             ];
         }
         
-        // Validate username
         if (strlen($userData['username']) < 3) {
             return [
                 'valid' => false,
@@ -440,19 +432,13 @@ class UserModel
         
         return ['valid' => true];
     }
-    
-    /**
-     * Loại bỏ thông tin nhạy cảm khỏi user data
-     */
+
     private function sanitizeUserData($user)
     {
         unset($user['password']);
         return $user;
     }
-    
-    /**
-     * Cập nhật last_login
-     */
+
     private function updateLastLogin($userId)
     {
         try {
@@ -599,7 +585,7 @@ class UserModel
         }
     }
 
-    public function getLeaderboard($limit = 50, $offset = 0, $rankFilter = 'all') {
+    public function getLeaderboard($limit = 20, $offset = 0, $rankFilter = 'all') {
         require_once APP_PATH . '/helpers/LeaderboardHelper.php';
         return LeaderboardHelper::getLeaderboardData($this->db, $limit, $offset, $rankFilter);
     }
@@ -612,18 +598,16 @@ class UserModel
     private function getRankTierFromRating($userRating) {
         global $RANKING;
         
-        // Xử lý đặc biệt cho rating -1 (unranked)
         if ($userRating == -1) {
             return 'Unranked';
         }
         
         foreach ($RANKING as $key => $rank) {
-            if ($userRating >= $rank['start_point'] && $userRating <= $rank['end_point']) {
+            if ($userRating >= $rank['min_rating'] && $userRating <= $rank['max_rating']) {
                 return $key;
             }
         }
         
-        // Mặc định trả về Unranked nếu không tìm thấy
         return 'Unranked';
     }
     
@@ -637,12 +621,11 @@ class UserModel
             
             foreach ($RANKING as $key => $rank) {
                 if ($key === 'Unranked') {
-                    // Xử lý đặc biệt cho Unranked (rating = -1)
                     $cases[] = "WHEN rating = -1 THEN '{$key}'";
-                } else if ($rank['end_point'] == 100000000000000) {
-                    $cases[] = "WHEN rating >= {$rank['start_point']} THEN '{$key}'";
+                } else if ($rank['max_rating'] >= 999999) {
+                    $cases[] = "WHEN rating >= {$rank['min_rating']} THEN '{$key}'";
                 } else {
-                    $cases[] = "WHEN rating BETWEEN {$rank['start_point']} AND {$rank['end_point']} THEN '{$key}'";
+                    $cases[] = "WHEN rating BETWEEN {$rank['min_rating']} AND {$rank['max_rating']} THEN '{$key}'";
                 }
                 $orderCases[] = "WHEN '{$key}' THEN {$i}";
                 $i++;

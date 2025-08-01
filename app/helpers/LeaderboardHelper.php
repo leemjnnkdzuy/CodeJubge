@@ -237,7 +237,7 @@ class LeaderboardHelper {
         ];
     }
 
-    public static function getLeaderboardData($db, $limit = 50, $offset = 0, $rankFilter = 'all') {
+    public static function getLeaderboardData($db, $limit = 20, $offset = 0, $rankFilter = 'all') {
         try {
             // Build filter conditions
             $whereClause = "WHERE u.is_active = 1 AND u.role = 'user'";

@@ -34,7 +34,7 @@ function getUserRank($rating) {
     ];
     
     foreach ($RANKING as $rankKey => $rankData) {
-        if ($rating >= $rankData['start_point'] && $rating <= $rankData['end_point']) {
+        if ($rating >= $rankData['min_rating'] && $rating <= $rankData['max_rating']) {
             $rankType = explode('_', $rankKey)[0];
             $color = $rankColors[$rankType] ?? '#4285f4';
             

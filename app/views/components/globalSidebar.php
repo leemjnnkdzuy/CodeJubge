@@ -87,8 +87,8 @@
                     </div>
                 <?php else: ?>
                     <div class="auth-buttons">
-                        <a href="/login" class="btn btn-primary">Đăng nhập</a>
-                        <a href="/register" class="btn btn-secondary">Đăng ký</a>
+                        <a href="/login" class="auth-btn login-btn">Đăng nhập</a>
+                        <a href="/register" class="auth-btn signup-btn">Đăng ký</a>
                     </div>
                 <?php endif; ?>
             </div>

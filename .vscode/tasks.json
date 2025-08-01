@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start XAMPP Server",
+			"type": "shell",
+			"command": "start",
+			"args": ["http://localhost/CodeJubge/leaderboard"],
+			"group": "test",
+			"isBackground": false
+		}
+	]
+}

@@ -95,51 +95,21 @@ $content = ob_start();
             </div>
         </div>
 
-        <?php if (($totalPages ?? 1) > 1): ?>
-            <div class="pagination">
-                <?php if ($hasPrevPage ?? false): ?>
-                    <button class="page-btn" onclick="changePage(<?= ($currentPage ?? 1) - 1 ?>)">
-                        <i class="bx bx-chevron-left"></i> Trước
-                    </button>
-                <?php endif; ?>
-
-                <div class="page-numbers">
-                    <?php
-                    $start = max(1, ($currentPage ?? 1) - 2);
-                    $end = min(($totalPages ?? 1), ($currentPage ?? 1) + 2);
-                    ?>
-                    
-                    <?php if ($start > 1): ?>
-                        <button class="page-btn" onclick="changePage(1)">1</button>
-                        <?php if ($start > 2): ?>
-                            <span class="page-dots">...</span>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <?php for ($i = $start; $i <= $end; $i++): ?>
-                        <button class="page-btn <?= $i == ($currentPage ?? 1) ? 'active' : '' ?>" 
-                                onclick="changePage(<?= $i ?>)">
-                            <?= $i ?>
-                        </button>
-                    <?php endfor; ?>
-
-                    <?php if ($end < ($totalPages ?? 1)): ?>
-                        <?php if ($end < ($totalPages ?? 1) - 1): ?>
-                            <span class="page-dots">...</span>
-                        <?php endif; ?>
-                        <button class="page-btn" onclick="changePage(<?= $totalPages ?? 1 ?>)">
-                            <?= $totalPages ?? 1 ?>
-                        </button>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($hasNextPage ?? false): ?>
-                    <button class="page-btn" onclick="changePage(<?= ($currentPage ?? 1) + 1 ?>)">
-                        Sau <i class="bx bx-chevron-right"></i>
-                    </button>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
+        <!-- Pagination - Problems style -->
+        <div class="pagination">
+            <button class="pagination-btn" <?= ($currentPage ?? 1) <= 1 ? 'disabled' : '' ?> 
+                    onclick="changePage(<?= max(1, ($currentPage ?? 1) - 1) ?>)">
+                <i class='bx bx-chevrons-left'></i>
+            </button>
+            <span class="pagination-info">
+                Trang <?= $currentPage ?? 1 ?> / <?= $totalPages ?? 1 ?> 
+                (<?= number_format($totalUsers ?? 0) ?> người dùng)
+            </span>
+            <button class="pagination-btn" <?= ($currentPage ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>
+                    onclick="changePage(<?= min(($totalPages ?? 1), ($currentPage ?? 1) + 1) ?>)">
+                <i class='bx bx-chevrons-right'></i>
+            </button>
+        </div>
     </div>
 
     <div class="rank-sidebar">
@@ -377,11 +347,9 @@ function filterByRank(tier) {
 }
 
 function changePage(page) {
-    const currentUrl = new URL(window.location);
-    currentUrl.searchParams.set('page', page);
-    
-    // Reload page with new page number
-    window.location.href = currentUrl.toString();
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set("page", page);
+    window.location.href = "/leaderboard?" + urlParams.toString();
 }
 
 function scrollToTop() {

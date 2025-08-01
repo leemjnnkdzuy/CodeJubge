@@ -14,7 +14,7 @@ class LeaderboardController {
             require_once APP_PATH . '/helpers/LeaderboardHelper.php';
             
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = 50;
+            $limit = 20;
             $offset = ($page - 1) * $limit;
             
             $rankFilter = isset($_GET['rank']) && !empty($_GET['rank']) ? $_GET['rank'] : 'all';
@@ -60,7 +60,7 @@ class LeaderboardController {
             require_once APP_PATH . '/helpers/LeaderboardHelper.php';
             
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = isset($_GET['limit']) ? min(100, max(10, intval($_GET['limit']))) : 50;
+            $limit = isset($_GET['limit']) ? min(100, max(10, intval($_GET['limit']))) : 20;
             $offset = ($page - 1) * $limit;
             $rankFilter = isset($_GET['rank']) && !empty($_GET['rank']) ? $_GET['rank'] : 'all';
             
