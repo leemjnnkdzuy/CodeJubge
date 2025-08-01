@@ -76,7 +76,7 @@ $content = ob_start();
             </div>
         </div>
         
-        <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url'])): ?>
+        <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url']) || !empty($viewingUser['youtube_url']) || !empty($viewingUser['facebook_url']) || !empty($viewingUser['instagram_url'])): ?>
         <div class="profile-section">
             <h2 class="section-title">Liên kết</h2>
             <div class="links-container">
@@ -98,6 +98,27 @@ $content = ob_start();
                 <a href="<?= htmlspecialchars($viewingUser['website_url']) ?>" target="_blank" class="link-item">
                     <i class='bx bx-link'></i>
                     <span>Website</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['youtube_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['youtube_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-youtube'></i>
+                    <span>YouTube</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['facebook_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['facebook_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-facebook'></i>
+                    <span>Facebook</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['instagram_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['instagram_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-instagram'></i>
+                    <span>Instagram</span>
                 </a>
                 <?php endif; ?>
             </div>
@@ -148,7 +169,7 @@ $content = ob_start();
             <button class="modal-close" onclick="closeEditModal()">&times;</button>
         </div>
         
-        <form class="edit-form" action="/profile/update" method="POST" enctype="multipart/form-data" onsubmit="debugFormSubmit(this)">
+        <form class="edit-form" action="/profile/update" method="POST" enctype="multipart/form-data" onsubmit="return submitForm(this)">
             <div class="form-group">
                 <label for="first_name">Tên</label>
                 <input type="text" id="first_name" name="first_name" 
@@ -164,13 +185,19 @@ $content = ob_start();
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" 
-                       value="<?= htmlspecialchars($viewingUser['username']) ?>" required>
+                       value="<?= htmlspecialchars($viewingUser['username']) ?>" 
+                       disabled readonly 
+                       style="background-color: #f5f5f5; cursor: not-allowed;">
+                <small class="form-note">Username không thể thay đổi</small>
             </div>
             
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" 
-                       value="<?= htmlspecialchars($viewingUser['email']) ?>" required>
+                       value="<?= htmlspecialchars($viewingUser['email']) ?>" 
+                       disabled readonly
+                       style="background-color: #f5f5f5; cursor: not-allowed;">
+                <small class="form-note">Email không thể thay đổi</small>
             </div>
             
             <div class="form-group full-width">
@@ -178,25 +205,69 @@ $content = ob_start();
                 <textarea id="bio" name="bio" rows="3" placeholder="Viết vài dòng về bản thân..."><?= htmlspecialchars($viewingUser['bio'] ?? '') ?></textarea>
             </div>
             
-            <div class="form-group">
-                <label for="github_url">GitHub URL</label>
-                <input type="url" id="github_url" name="github_url" 
-                       value="<?= htmlspecialchars($viewingUser['github_url'] ?? '') ?>" 
-                       placeholder="https://github.com/username">
-            </div>
-            
-            <div class="form-group">
-                <label for="linkedin_url">LinkedIn URL</label>
-                <input type="url" id="linkedin_url" name="linkedin_url" 
-                       value="<?= htmlspecialchars($viewingUser['linkedin_url'] ?? '') ?>" 
-                       placeholder="https://linkedin.com/in/username">
-            </div>
-            
-            <div class="form-group full-width">
-                <label for="website_url">Website URL</label>
-                <input type="url" id="website_url" name="website_url" 
-                       value="<?= htmlspecialchars($viewingUser['website_url'] ?? '') ?>" 
-                       placeholder="https://yourwebsite.com">
+            <div class="form-section full-width">
+                <h3 class="section-subtitle">Liên kết mạng xã hội</h3>
+                <div class="social-links-grid">
+                    <div class="form-group">
+                        <label for="github_url">
+                            <i class='bx bxl-github'></i>
+                            GitHub URL
+                        </label>
+                        <input type="url" id="github_url" name="github_url" 
+                               value="<?= htmlspecialchars($viewingUser['github_url'] ?? '') ?>" 
+                               placeholder="https://github.com/username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="linkedin_url">
+                            <i class='bx bxl-linkedin'></i>
+                            LinkedIn URL
+                        </label>
+                        <input type="url" id="linkedin_url" name="linkedin_url" 
+                               value="<?= htmlspecialchars($viewingUser['linkedin_url'] ?? '') ?>" 
+                               placeholder="https://linkedin.com/in/username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="website_url">
+                            <i class='bx bx-link'></i>
+                            Website URL
+                        </label>
+                        <input type="url" id="website_url" name="website_url" 
+                               value="<?= htmlspecialchars($viewingUser['website_url'] ?? '') ?>" 
+                               placeholder="https://yourwebsite.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="youtube_url">
+                            <i class='bx bxl-youtube'></i>
+                            YouTube URL
+                        </label>
+                        <input type="url" id="youtube_url" name="youtube_url" 
+                               value="<?= htmlspecialchars($viewingUser['youtube_url'] ?? '') ?>" 
+                               placeholder="https://youtube.com/channel/your-channel">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="facebook_url">
+                            <i class='bx bxl-facebook'></i>
+                            Facebook URL
+                        </label>
+                        <input type="url" id="facebook_url" name="facebook_url" 
+                               value="<?= htmlspecialchars($viewingUser['facebook_url'] ?? '') ?>" 
+                               placeholder="https://facebook.com/your-profile">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="instagram_url">
+                            <i class='bx bxl-instagram'></i>
+                            Instagram URL
+                        </label>
+                        <input type="url" id="instagram_url" name="instagram_url" 
+                               value="<?= htmlspecialchars($viewingUser['instagram_url'] ?? '') ?>" 
+                               placeholder="https://instagram.com/your-username">
+                    </div>
+                </div>
             </div>
             
             <div class="form-group full-width">
@@ -218,8 +289,8 @@ $content = ob_start();
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-secondary" onclick="closeEditModal()">Hủy</button>
-                <button type="submit" class="btn-primary">Lưu thay đổi</button>
+                <button type="button" class="auth-btn login-btn" onclick="closeEditModal()">Hủy</button>
+                <button type="submit" class="auth-btn signup-btn">Lưu thay đổi</button>
             </div>
         </form>
     </div>
@@ -248,193 +319,15 @@ $content = ob_start();
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-secondary" onclick="closeAvatarModal()">Hủy</button>
-                <button type="submit" class="btn-primary">Cập nhật ảnh</button>
+                <button type="button" class="auth-btn login-btn" onclick="closeAvatarModal()">Hủy</button>
+                <button type="submit" class="auth-btn signup-btn">Cập nhật ảnh</button>
             </div>
         </form>
     </div>
 </div>
 <?php endif; ?>
 
-<script>
-function openEditModal() {
-    document.getElementById('editProfileModal').style.display = 'flex';
-}
-
-function closeEditModal() {
-    document.getElementById('editProfileModal').style.display = 'none';
-}
-
-function openAvatarModal() {
-    document.getElementById('avatarModal').style.display = 'flex';
-}
-
-function closeAvatarModal() {
-    document.getElementById('avatarModal').style.display = 'none';
-}
-
-function previewAvatar(input) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showNotification('error', 'Chỉ chấp nhận file ảnh với định dạng JPG, PNG, GIF, WebP!');
-            input.value = '';
-            return;
-        }
-        
-        const maxSize = 2048000;
-        if (file.size > maxSize) {
-            showNotification('error', 'File ảnh quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
-            input.value = '';
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('avatarPreview').src = e.target.result;
-            showNotification('success', 'Ảnh hợp lệ! Bạn có thể cập nhật ảnh đại diện.');
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function previewAvatarInEdit(input) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showNotification('error', 'Chỉ chấp nhận file ảnh với định dạng JPG, PNG, GIF, WebP!');
-            input.value = '';
-            return;
-        }
-        
-        const maxSize = 2048000;
-        if (file.size > maxSize) {
-            showNotification('error', 'File ảnh quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
-            input.value = '';
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('currentAvatarPreview').src = e.target.result;
-            showNotification('success', 'Ảnh hợp lệ! Sẽ được cập nhật khi lưu thay đổi.');
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function debugFormSubmit(form) {
-    console.log('Form being submitted:');
-    const formData = new FormData(form);
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ': ' + value);
-    }
-    showNotification('info', 'Đang cập nhật thông tin...');
-    return true;
-}
-
-function validateAvatarForm(form) {
-    const fileInput = form.querySelector('#avatar');
-    
-    if (!fileInput.files || !fileInput.files[0]) {
-        showNotification('error', 'Vui lòng chọn một file ảnh!');
-        return false;
-    }
-    
-    const file = fileInput.files[0];
-    
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-        showNotification('error', 'Định dạng file không được hỗ trợ! Chỉ chấp nhận JPG, PNG, GIF, WebP.');
-        return false;
-    }
-    
-    const maxSize = 2048000;
-    if (file.size > maxSize) {
-        showNotification('error', 'File quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
-        return false;
-    }
-    
-    showNotification('info', 'Đang tải ảnh lên...');
-    return true;
-}
-
-function showNotification(type, message) {
-    const existing = document.getElementById('popupNotification');
-    if (existing) {
-        existing.remove();
-    }
-    
-    const notification = document.createElement('div');
-    notification.id = 'popupNotification';
-    notification.className = `popup-notification ${type}`;
-    
-    let icon = '';
-    switch(type) {
-        case 'success':
-            icon = '<i class="bx bx-check-circle"></i>';
-            break;
-        case 'error':
-            icon = '<i class="bx bx-error-circle"></i>';
-            break;
-        case 'warning':
-            icon = '<i class="bx bx-error"></i>';
-            break;
-        default:
-            icon = '<i class="bx bx-info-circle"></i>';
-    }
-    
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">
-                ${icon}
-            </div>
-            <div class="notification-message">
-                ${message}
-            </div>
-            <button class="notification-close" onclick="closeNotification()">
-                <i class='bx bx-x'></i>
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-    
-    if (type !== 'info') {
-        setTimeout(() => {
-            closeNotification();
-        }, 5000);
-    }
-}
-
-function closeNotification() {
-    const notification = document.getElementById('popupNotification');
-    if (notification) {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }
-}
-
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal')) {
-        e.target.style.display = 'none';
-    }
-});
-</script>
-
-<style>
-
-</style>
+<script src="/js/profile.js"></script>
 
 <?php 
 $content = ob_get_clean();

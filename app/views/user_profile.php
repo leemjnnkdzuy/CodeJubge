@@ -121,7 +121,7 @@ $content = ob_start();
             </div>
         </div>
         
-        <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url'])): ?>
+        <?php if (!empty($viewingUser['github_url']) || !empty($viewingUser['linkedin_url']) || !empty($viewingUser['website_url']) || !empty($viewingUser['youtube_url']) || !empty($viewingUser['facebook_url']) || !empty($viewingUser['instagram_url'])): ?>
         <div class="profile-section">
             <h2 class="section-title">Liên kết</h2>
             <div class="links-container">
@@ -143,6 +143,27 @@ $content = ob_start();
                 <a href="<?= htmlspecialchars($viewingUser['website_url']) ?>" target="_blank" class="link-item">
                     <i class='bx bx-link'></i>
                     <span>Website</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['youtube_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['youtube_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-youtube'></i>
+                    <span>YouTube</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['facebook_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['facebook_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-facebook'></i>
+                    <span>Facebook</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($viewingUser['instagram_url'])): ?>
+                <a href="<?= htmlspecialchars($viewingUser['instagram_url']) ?>" target="_blank" class="link-item">
+                    <i class='bx bxl-instagram'></i>
+                    <span>Instagram</span>
                 </a>
                 <?php endif; ?>
             </div>

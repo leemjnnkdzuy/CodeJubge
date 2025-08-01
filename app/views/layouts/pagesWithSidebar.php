@@ -62,6 +62,8 @@
         </div>
     </div>
 
+    <?php include VIEW_PATH . '/components/popupNotification.php'; ?>
+
     <script src="js/sidebar.js"></script>
     <?php if (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0): ?>
         <script src="js/leaderboard.js"></script>
@@ -82,6 +84,35 @@
         
         window.addEventListener('load', checkScreenSize);
         window.addEventListener('resize', checkScreenSize);
+        
+        // Auto show notification if exists
+        document.addEventListener('DOMContentLoaded', function() {
+            const notification = document.getElementById('popupNotification');
+            if (notification) {
+                setTimeout(() => {
+                    notification.classList.add('show');
+                }, 100);
+                
+                // Auto hide after 5 seconds for non-info notifications
+                if (!notification.className.includes('info')) {
+                    setTimeout(() => {
+                        if (typeof closeNotification === 'function') {
+                            closeNotification();
+                        }
+                    }, 5000);
+                }
+            }
+        });
+        
+        function closeNotification() {
+            const notification = document.getElementById('popupNotification');
+            if (notification) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }
+        }
     </script>
 </body>
 </html>

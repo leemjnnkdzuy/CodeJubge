@@ -35,6 +35,9 @@ class ProfileController extends Controller
             $userBadges = [];
         }
         
+        // Include ranking system
+        require_once APP_PATH . '/helpers/LeaderboardHelper.php';
+        
         $title = 'Trang cá nhân - ' . $currentUser['first_name'] . ' ' . $currentUser['last_name'];
         $description = 'Trang cá nhân của ' . $currentUser['username'] . ' trên CodeJudge';
         
@@ -70,6 +73,9 @@ class ProfileController extends Controller
             $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
         }
         
+        // Include ranking system
+        require_once APP_PATH . '/helpers/LeaderboardHelper.php';
+        
         $title = 'Trang cá nhân - ' . $profileUser['first_name'] . ' ' . $profileUser['last_name'];
         $description = 'Trang cá nhân của ' . $profileUser['username'] . ' trên CodeJudge';
         
@@ -78,8 +84,6 @@ class ProfileController extends Controller
     
     public function update()
     {
-        error_log("Profile Update - Session: " . print_r($_SESSION, true));
-        
         if (!isset($_SESSION['user_id'])) {
             NotificationHelper::error('Bạn cần đăng nhập');
             header('Location: /login');
@@ -94,9 +98,6 @@ class ProfileController extends Controller
         
         $userId = $_SESSION['user_id'];
         $updateData = [];
-        
-        error_log("Profile Update - POST data: " . print_r($_POST, true));
-        error_log("Profile Update - FILES data: " . print_r($_FILES, true));
         
         if (empty($_POST) && empty($_FILES)) {
             NotificationHelper::error('Không có dữ liệu để cập nhật');
@@ -124,40 +125,7 @@ class ProfileController extends Controller
             $updateData['last_name'] = $lastName;
         }
         
-        if (isset($_POST['username'])) {
-            $username = trim($_POST['username']);
-            if (empty($username)) {
-                NotificationHelper::error('Username không được để trống');
-                header('Location: /profile');
-                exit;
-            }
-            if ($this->isUsernameExistsExcludingUser($username, $userId)) {
-                NotificationHelper::error('Username đã được sử dụng');
-                header('Location: /profile');
-                exit;
-            }
-            $updateData['username'] = $username;
-        }
-        
-        if (isset($_POST['email'])) {
-            $email = trim($_POST['email']);
-            if (empty($email)) {
-                NotificationHelper::error('Email không được để trống');
-                header('Location: /profile');
-                exit;
-            }
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                NotificationHelper::error('Email không hợp lệ');
-                header('Location: /profile');
-                exit;
-            }
-            if ($this->isEmailExistsExcludingUser($email, $userId)) {
-                NotificationHelper::error('Email đã được sử dụng');
-                header('Location: /profile');
-                exit;
-            }
-            $updateData['email'] = $email;
-        }
+        // Username và Email không cho phép thay đổi - removed validation
         
         if (isset($_POST['bio'])) {
             $updateData['bio'] = trim($_POST['bio']);
@@ -193,6 +161,36 @@ class ProfileController extends Controller
             $updateData['website_url'] = $websiteUrl;
         }
         
+        if (isset($_POST['youtube_url'])) {
+            $youtubeUrl = trim($_POST['youtube_url']);
+            if (!empty($youtubeUrl) && !filter_var($youtubeUrl, FILTER_VALIDATE_URL)) {
+                NotificationHelper::error('YouTube URL không hợp lệ');
+                header('Location: /profile');
+                exit;
+            }
+            $updateData['youtube_url'] = $youtubeUrl;
+        }
+        
+        if (isset($_POST['facebook_url'])) {
+            $facebookUrl = trim($_POST['facebook_url']);
+            if (!empty($facebookUrl) && !filter_var($facebookUrl, FILTER_VALIDATE_URL)) {
+                NotificationHelper::error('Facebook URL không hợp lệ');
+                header('Location: /profile');
+                exit;
+            }
+            $updateData['facebook_url'] = $facebookUrl;
+        }
+        
+        if (isset($_POST['instagram_url'])) {
+            $instagramUrl = trim($_POST['instagram_url']);
+            if (!empty($instagramUrl) && !filter_var($instagramUrl, FILTER_VALIDATE_URL)) {
+                NotificationHelper::error('Instagram URL không hợp lệ');
+                header('Location: /profile');
+                exit;
+            }
+            $updateData['instagram_url'] = $instagramUrl;
+        }
+        
         if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
             try {
                 $file = $_FILES['avatar'];
@@ -214,9 +212,11 @@ class ProfileController extends Controller
                 }
                 
                 $avatarBase64 = AvatarHelper::processUploadedImage($_FILES['avatar']);
-                $updateData['avatar'] = $avatarBase64;
+                if (!$avatarBase64) {
+                    throw new Exception('Không thể xử lý file ảnh.');
+                }
                 
-                NotificationHelper::success('Upload ảnh đại diện thành công!');
+                $updateData['avatar'] = $avatarBase64;
                 
             } catch (Exception $e) {
                 NotificationHelper::error('Lỗi upload avatar: ' . $e->getMessage());
@@ -240,19 +240,21 @@ class ProfileController extends Controller
         }
         
         if (!empty($updateData)) {
-            error_log("Profile Update - Update data: " . print_r($updateData, true));
-            
             $result = $this->userModel->updateUser($userId, $updateData);
             
-            error_log(message: "Profile Update - Result: " . print_r($result, true));
-            
             if ($result['success']) {
-                if (isset($updateData['first_name']) || isset($updateData['last_name']) || isset($updateData['username']) || isset($updateData['email'])) {
+                // Update session data if basic info changed (only first_name, last_name)
+                if (isset($updateData['first_name']) || isset($updateData['last_name'])) {
                     $_SESSION['user'] = $this->userModel->getUserById($userId);
                 }
                 
+                // Show appropriate success message
                 if (isset($updateData['avatar'])) {
-                    NotificationHelper::success('Cập nhật ảnh đại diện thành công!');
+                    if (count($updateData) === 1) {
+                        NotificationHelper::success('Cập nhật ảnh đại diện thành công!');
+                    } else {
+                        NotificationHelper::success('Cập nhật thông tin cá nhân và ảnh đại diện thành công!');
+                    }
                 } else {
                     NotificationHelper::success('Cập nhật thông tin cá nhân thành công!');
                 }
@@ -265,34 +267,6 @@ class ProfileController extends Controller
         
         header('Location: /profile');
         exit;
-    }
-    
-    private function isUsernameExistsExcludingUser($username, $excludeUserId)
-    {
-        try {
-            $query = "SELECT id FROM users WHERE username = :username AND id != :id";
-            $result = $this->userModel->getDb()->selectOne($query, [
-                'username' => $username,
-                'id' => $excludeUserId
-            ]);
-            return $result !== null;
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-    
-    private function isEmailExistsExcludingUser($email, $excludeUserId)
-    {
-        try {
-            $query = "SELECT id FROM users WHERE email = :email AND id != :id";
-            $result = $this->userModel->getDb()->selectOne($query, [
-                'email' => $email,
-                'id' => $excludeUserId
-            ]);
-            return $result !== null;
-        } catch (Exception $e) {
-            return false;
-        }
     }
 }
 ?>

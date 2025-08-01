@@ -139,10 +139,7 @@ class UserModel
     public function updateUser($userId, $userData): array
     {
         try {
-            error_log("UserModel::updateUser - UserID: $userId");
-            error_log("UserModel::updateUser - UserData: " . print_r($userData, true));
-            
-            $allowedFields = ['first_name', 'last_name', 'username', 'email', 'bio', 'avatar', 'github_url', 'linkedin_url', 'website_url'];
+            $allowedFields = ['first_name', 'last_name', 'bio', 'avatar', 'github_url', 'linkedin_url', 'website_url', 'youtube_url', 'facebook_url', 'instagram_url'];
             $updateFields = [];
             $params = ['id' => $userId];
             
@@ -153,9 +150,6 @@ class UserModel
                 }
             }
             
-            error_log("UserModel::updateUser - UpdateFields: " . print_r($updateFields, true));
-            error_log("UserModel::updateUser - Params: " . print_r($params, true));
-            
             if (empty($updateFields)) {
                 return [
                     'success' => false,
@@ -163,31 +157,14 @@ class UserModel
                 ];
             }
             
-            if (isset($userData['email']) && $this->isEmailExistsExcludingUser($userData['email'], $userId)) {
-                return [
-                    'success' => false,
-                    'message' => 'Email đã được sử dụng'
-                ];
-            }
-            
-            if (isset($userData['username']) && $this->isUsernameExistsExcludingUser($userData['username'], $userId)) {
-                return [
-                    'success' => false,
-                    'message' => 'Username đã được sử dụng'
-                ];
-            }
+            // Username và Email không cho phép thay đổi - removed validation
             
             $updateFields[] = "updated_at = :updated_at";
             $params['updated_at'] = date('Y-m-d H:i:s');
             
             $query = "UPDATE {$this->table} SET " . implode(', ', $updateFields) . " WHERE id = :id";
             
-            error_log("UserModel::updateUser - Final Query: $query");
-            error_log("UserModel::updateUser - Final Params: " . print_r($params, true));
-            
             $affected = $this->db->update($query, $params);
-            
-            error_log("UserModel::updateUser - Affected rows: $affected");
             
             if ($affected > 0) {
                 return [
@@ -195,9 +172,18 @@ class UserModel
                     'message' => 'Cập nhật thông tin thành công'
                 ];
             } else {
+                // Check if user exists to distinguish between no changes and actual error
+                $userExists = $this->getUserById($userId);
+                if (!$userExists) {
+                    return [
+                        'success' => false,
+                        'message' => 'Người dùng không tồn tại'
+                    ];
+                }
+                
                 return [
-                    'success' => false,
-                    'message' => 'Không có thay đổi nào được thực hiện'
+                    'success' => true,
+                    'message' => 'Không có thông tin nào được thay đổi'
                 ];
             }
             
@@ -565,7 +551,8 @@ class UserModel
                 'email' => $email,
                 'id' => $excludeUserId
             ]);
-            return $result !== null;
+            
+            return $result !== false;
         } catch (Exception $e) {
             return false;
         }
@@ -579,7 +566,8 @@ class UserModel
                 'username' => $username,
                 'id' => $excludeUserId
             ]);
-            return $result !== null;
+            
+            return $result !== false;
         } catch (Exception $e) {
             return false;
         }

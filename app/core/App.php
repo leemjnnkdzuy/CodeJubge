@@ -79,12 +79,10 @@ class App
     
     private function handleError($e)
     {
-        // Start session if not already started
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         
-        // Set notification message
         if (strpos($e->getMessage(), 'database') !== false || strpos($e->getMessage(), 'connection') !== false) {
             $_SESSION['notification'] = [
                 'type' => 'error',
@@ -97,11 +95,9 @@ class App
             ];
         }
         
-        // Log the actual error for debugging
         error_log("Application Error: " . $e->getMessage());
         error_log("Stack trace: " . $e->getTraceAsString());
         
-        // Create a simple error page instead of redirecting
         $this->showErrorPage();
     }
     
@@ -110,7 +106,6 @@ class App
         http_response_code(500);
         $title = 'Lỗi Hệ Thống - CodeJudge';
         
-        // Simple error page that doesn't require database
         echo '<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -129,7 +124,6 @@ class App
 </head>
 <body>';
         
-        // Include popup notification component
         if (isset($_SESSION['notification'])) {
             include VIEW_PATH . '/components/popupNotification.php';
         }
