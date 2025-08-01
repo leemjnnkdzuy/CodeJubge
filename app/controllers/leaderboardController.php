@@ -10,7 +10,8 @@ class LeaderboardController {
     
     public function index() {
         try {
-            global $RANKING;
+            global $BADGES;
+            require_once APP_PATH . '/helpers/LeaderboardHelper.php';
             
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = 50;
@@ -18,16 +19,15 @@ class LeaderboardController {
             
             $rankFilter = isset($_GET['rank']) && !empty($_GET['rank']) ? $_GET['rank'] : 'all';
             
-            $leaderboardData = $this->userModel->getLeaderboard($limit, $offset, $rankFilter);
-            $totalUsers = $this->userModel->getTotalActiveUsers();
-            $totalPages = ceil($totalUsers / $limit);
-            
-            require_once APP_PATH . '/helpers/AvatarHelper.php';
-            foreach ($leaderboardData as &$user) {
-                $user['avatar_src'] = AvatarHelper::base64ToImageSrc($user['avatar']);
+            if (!LeaderboardHelper::isValidRankFilter($rankFilter)) {
+                $rankFilter = 'all';
             }
             
-            $rankTiers = $this->formatRankingSystem($RANKING);
+            $leaderboardData = $this->userModel->getLeaderboard($limit, $offset, $rankFilter);
+            $totalUsers = $this->userModel->getTotalActiveUsers($rankFilter);
+            $totalPages = ceil($totalUsers / $limit);
+            
+            $rankTiers = LeaderboardHelper::formatRankTiers();
             
             $data = [
                 'leaderboard' => $leaderboardData,
@@ -37,7 +37,8 @@ class LeaderboardController {
                 'rankTiers' => $rankTiers,
                 'currentRankFilter' => $rankFilter,
                 'hasNextPage' => $page < $totalPages,
-                'hasPrevPage' => $page > 1
+                'hasPrevPage' => $page > 1,
+                'BADGES' => $BADGES
             ];
             
             extract($data);
@@ -55,22 +56,22 @@ class LeaderboardController {
         header('Content-Type: application/json');
         
         try {
-            global $RANKING;
+            global $BADGES;
+            require_once APP_PATH . '/helpers/LeaderboardHelper.php';
             
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
             $limit = isset($_GET['limit']) ? min(100, max(10, intval($_GET['limit']))) : 50;
             $offset = ($page - 1) * $limit;
             $rankFilter = isset($_GET['rank']) && !empty($_GET['rank']) ? $_GET['rank'] : 'all';
             
-            $leaderboardData = $this->userModel->getLeaderboard($limit, $offset, $rankFilter);
-            $totalUsers = $this->userModel->getTotalActiveUsers();
-            
-            require_once APP_PATH . '/helpers/AvatarHelper.php';
-            foreach ($leaderboardData as &$user) {
-                $user['avatar_src'] = AvatarHelper::base64ToImageSrc($user['avatar']);
+            if (!LeaderboardHelper::isValidRankFilter($rankFilter)) {
+                $rankFilter = 'all';
             }
             
-            $rankTiers = $this->formatRankingSystem($RANKING);
+            $leaderboardData = $this->userModel->getLeaderboard($limit, $offset, $rankFilter);
+            $totalUsers = $this->userModel->getTotalActiveUsers($rankFilter);
+            
+            $rankTiers = LeaderboardHelper::formatRankTiers();
             
             echo json_encode([
                 'success' => true,
@@ -91,46 +92,5 @@ class LeaderboardController {
             ]);
         }
         exit;
-    }
-    
-    private function formatRankingSystem($ranking) {
-        $rankTiers = [];
-        $colors = [
-            'Unranked' => '#6c757d',
-        	'Iron' => '#6c757d',
-			'Bronze' => '#cd7f32',
-			'Silver' => '#666666ff',
-			'Gold' => '#ffd700',
-			'Platinum' => '#00a78bff',
-			'Diamond' => '#b30fffff',
-			'Ascendant' => '#00c462ff',
-			'Immortal' => '#7e0000ff',
-			'Radiant' => '#fff345ff'
-        ];
-        
-        foreach ($ranking as $key => $rank) {
-            $tierName = explode('_', $key)[0];
-            $color = $colors[$tierName] ?? '#6c757d';
-            
-            $rangeText = '';
-            if ($rank['start_point'] == -100000000000000) {
-                $rangeText = 'Chưa có điểm';
-            } elseif ($rank['end_point'] == 100000000000000) {
-                $rangeText = $rank['start_point'] . '+';
-            } else {
-                $rangeText = $rank['start_point'] . ' - ' . $rank['end_point'];
-            }
-            
-            $rankTiers[$key] = [
-                'name' => $rank['name'],
-                'range' => $rangeText,
-                'image' => '/assets/' . $rank['icon'],
-                'color' => $color,
-                'start_point' => $rank['start_point'],
-                'end_point' => $rank['end_point']
-            ];
-        }
-        
-        return $rankTiers;
     }
 }

@@ -3,7 +3,7 @@ require_once CORE_PATH . '/Controller.php';
 require_once MODEL_PATH . '/UserModel.php';
 require_once APP_PATH . '/helpers/AvatarHelper.php';
 require_once APP_PATH . '/helpers/NotificationHelper.php';
-require_once APP_PATH . '/helpers/RatingHelper.php';
+require_once APP_PATH . '/helpers/LeaderboardHelper.php';
 
 class ProfileController extends Controller
 {

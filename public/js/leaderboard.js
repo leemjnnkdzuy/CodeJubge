@@ -1,6 +1,6 @@
 /**
- * LEADERBOARD JAVASCRIPT
- * Xử lý các tương tác trên trang leaderboard
+ * LEADERBOARD JAVASCRIPT - SIMPLIFIED VERSION
+ * Xử lý các tương tác trên trang leaderboard mà không ghi đè dữ liệu PHP
  */
 
 class LeaderboardManager {
@@ -13,8 +13,17 @@ class LeaderboardManager {
 
     init() {
         this.bindEvents();
-        this.updateURL();
+        this.parseURLParams();
         this.addScrollAnimation();
+        
+        // KHÔNG tự động load data - chỉ sử dụng data từ PHP
+        console.log('LeaderboardManager initialized - using PHP data only');
+    }
+    
+    parseURLParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        this.currentPage = parseInt(urlParams.get('page')) || 1;
+        this.currentRankFilter = urlParams.get('rank') || 'all';
     }
 
     bindEvents() {
@@ -58,44 +67,47 @@ class LeaderboardManager {
     }
 
     /**
-     * Lọc leaderboard theo rank tier
+     * Lọc leaderboard theo rank tier - Redirect thay vì AJAX
      */
     filterByRank(tier) {
         if (this.isLoading) return;
         
-        this.currentRankFilter = tier;
-        this.currentPage = 1;
+        // Redirect với parameter mới
+        const currentUrl = new URL(window.location);
         
-        // Update UI
-        this.updateFilterButtons();
-        this.updateRankItems();
+        if (tier === 'all') {
+            currentUrl.searchParams.delete('rank');
+        } else {
+            currentUrl.searchParams.set('rank', tier);
+        }
         
-        // Load data
-        this.loadLeaderboardData();
+        // Reset về trang 1 khi filter
+        currentUrl.searchParams.delete('page');
         
-        // Update URL
-        this.updateURL();
-        
-        // Scroll to top
-        this.scrollToTop();
+        window.location.href = currentUrl.toString();
     }
 
     /**
-     * Thay đổi trang
+     * Thay đổi trang - Redirect thay vì AJAX
      */
     changePage(page) {
         if (this.isLoading || page < 1) return;
         
-        this.currentPage = page;
-        this.loadLeaderboardData();
-        this.updateURL();
-        this.scrollToTop();
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('page', page);
+        
+        window.location.href = currentUrl.toString();
     }
 
     /**
-     * Load dữ liệu leaderboard qua AJAX
+     * Load dữ liệu leaderboard qua AJAX - DISABLED
      */
     async loadLeaderboardData() {
+        console.log('loadLeaderboardData called but disabled - using PHP data only');
+        return;
+        
+        // AJAX code disabled to prevent duplicates
+        /*
         if (this.isLoading) return;
         
         this.isLoading = true;
@@ -125,6 +137,7 @@ class LeaderboardManager {
             this.isLoading = false;
             this.hideLoadingState();
         }
+        */
     }
 
     /**
@@ -380,10 +393,10 @@ class LeaderboardManager {
     }
 
     /**
-     * Refresh dữ liệu
+     * Refresh dữ liệu - Reload trang thay vì AJAX
      */
     refreshData() {
-        this.loadLeaderboardData();
+        window.location.reload();
     }
 
     /**
@@ -537,19 +550,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Handle browser back/forward
+// Handle browser back/forward - Reload thay vì AJAX
 window.addEventListener('popstate', () => {
-    if (window.leaderboardManager) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const page = parseInt(urlParams.get('page')) || 1;
-        const rank = urlParams.get('rank') || 'all';
-        
-        window.leaderboardManager.currentPage = page;
-        window.leaderboardManager.currentRankFilter = rank;
-        window.leaderboardManager.loadLeaderboardData();
-        window.leaderboardManager.updateFilterButtons();
-        window.leaderboardManager.updateRankItems();
-    }
+    // Đơn giản reload trang để tránh trùng lặp
+    window.location.reload();
 });
 
 // CSS animations

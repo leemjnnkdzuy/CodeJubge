@@ -600,94 +600,13 @@ class UserModel
     }
 
     public function getLeaderboard($limit = 50, $offset = 0, $rankFilter = 'all') {
-        try {
-            global $RANKING;
-            
-            $whereClause = "WHERE u.is_active = 1 AND u.role = 'user'";
-            $params = [];
-            
-            if ($rankFilter !== 'all' && isset($RANKING[$rankFilter])) {
-                $rank = $RANKING[$rankFilter];
-                
-                // Xử lý đặc biệt cho Unranked
-                if ($rankFilter === 'Unranked') {
-                    $whereClause .= " AND u.rating = -1";
-                } else {
-                    if ($rank['end_point'] != 100000000000000) {
-                        $whereClause .= " AND u.rating BETWEEN :start_point AND :end_point";
-                        $params['start_point'] = $rank['start_point'];
-                        $params['end_point'] = $rank['end_point'];
-                    } else {
-                        $whereClause .= " AND u.rating >= :start_point";
-                        $params['start_point'] = $rank['start_point'];
-                    }
-                }
-            }
-            
-            $query = "
-                SELECT 
-                    u.id,
-                    u.username,
-                    u.first_name,
-                    u.last_name,
-                    u.avatar,
-                    u.total_problems_solved,
-                    u.total_submissions,
-                    u.rating,
-                    u.badges,
-                    RANK() OVER (
-                        ORDER BY 
-                            u.total_problems_solved DESC, 
-                            CASE WHEN u.rating = -1 THEN 0 ELSE u.rating END DESC, 
-                            u.id ASC
-                    ) as user_rank
-                FROM {$this->table} u
-                {$whereClause}
-                ORDER BY 
-                    u.total_problems_solved DESC, 
-                    CASE WHEN u.rating = -1 THEN 0 ELSE u.rating END DESC, 
-                    u.id ASC
-                LIMIT :limit OFFSET :offset
-            ";
-            
-            $params['limit'] = $limit;
-            $params['offset'] = $offset;
-            
-            $results = $this->db->select($query, $params);
-            
-            $leaderboard = [];
-            foreach ($results as $index => $user) {
-                $leaderboard[] = [
-                    'rank' => $user['user_rank'] ?? ($offset + $index + 1),
-                    'id' => $user['id'],
-                    'username' => $user['username'],
-                    'full_name' => trim($user['first_name'] . ' ' . $user['last_name']),
-                    'avatar' => $user['avatar'],
-                    'problems_solved' => $user['total_problems_solved'],
-                    'total_submissions' => $user['total_submissions'],
-                    'rating' => $user['rating'],
-                    'badges' => $user['badges'] ? json_decode($user['badges'], true) : [],
-                    'rank_tier' => $this->getRankTierFromRating($user['rating'])
-                ];
-            }
-            
-            return $leaderboard;
-            
-        } catch (Exception $e) {
-            error_log("Error getting leaderboard: " . $e->getMessage());
-            return [];
-        }
+        require_once APP_PATH . '/helpers/LeaderboardHelper.php';
+        return LeaderboardHelper::getLeaderboardData($this->db, $limit, $offset, $rankFilter);
     }
 
-    public function getTotalActiveUsers() {
-        try {
-            $query = "SELECT COUNT(*) as total FROM {$this->table} WHERE is_active = 1 AND role = 'user'";
-            $result = $this->db->selectOne($query);
-            return $result['total'] ?? 0;
-        } catch (Exception $e) {
-            error_log("Error getting total active users: " . $e->getMessage());
-            return 0;
-        }
+    public function getTotalActiveUsers($rankFilter = 'all') {
+        require_once APP_PATH . '/helpers/LeaderboardHelper.php';
+        return LeaderboardHelper::getTotalFilteredUsers($this->db, $rankFilter);
     }
     
     private function getRankTierFromRating($userRating) {

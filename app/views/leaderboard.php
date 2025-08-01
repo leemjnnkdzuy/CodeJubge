@@ -1,12 +1,12 @@
 <?php 
-require_once APP_PATH . '/helpers/AvatarHelper.php';
+require_once APP_PATH . '/helpers/LeaderboardHelper.php';
 $content = ob_start(); 
 ?>
 
 <div class="leaderboard-container">
     <div class="leaderboard-list">
         <div class="leaderboard-header">
-            <h1><i class="bx bx-trophy"></i> Bảng Xếp Hạng</h1>
+            <h1>Bảng Xếp Hạng</h1>
             <div class="leaderboard-stats">
                 <span class="total-users"><?= number_format($totalUsers ?? 0) ?> thành viên</span>
                 <span class="page-info">Trang <?= $currentPage ?? 1 ?>/<?= $totalPages ?? 1 ?></span>
@@ -63,14 +63,18 @@ $content = ob_start();
                             
                             <div class="badges-col">
                                 <div class="badges-container">
-                                    <?php if (!empty($user['badges'])): ?>
+                                    <?php if (!empty($user['badges']) && is_array($user['badges'])): ?>
                                         <?php $badgeCount = count($user['badges']); ?>
                                         <?php for ($i = 0; $i < min(3, $badgeCount); $i++): ?>
-                                            <div class="badge-item">
-                                                <img src="/assets/<?= $BADGES[$user['badges'][$i]]['File'] ?? 'default-badge.svg' ?>" 
-                                                     alt="<?= $user['badges'][$i] ?>"
-                                                     title="<?= $BADGES[$user['badges'][$i]]['title'] ?? ucwords(str_replace('_', ' ', $user['badges'][$i])) ?>">
-                                            </div>
+                                            <?php if (isset($BADGES[$user['badges'][$i]])): ?>
+                                                <div class="badge-item">
+                                                    <img src="<?= PUBLIC_ASSETS_PATH . ($BADGES[$user['badges'][$i]]['File'] ?? 'default-badge.svg') ?>" 
+                                                         alt="<?= htmlspecialchars($user['badges'][$i]) ?>"
+                                                         title="<?= htmlspecialchars($BADGES[$user['badges'][$i]]['title'] ?? ucwords(str_replace('_', ' ', $user['badges'][$i]))) ?>"
+                                                         onerror="this.src='<?= PUBLIC_ASSETS_PATH ?>default-badge.svg'">
+                                                </div>
+                                            <?php else: ?>
+                                            <?php endif; ?>
                                         <?php endfor; ?>
                                         <?php if ($badgeCount > 3): ?>
                                             <div class="badge-more">+<?= $badgeCount - 3 ?></div>
@@ -373,7 +377,6 @@ function filterByRank(tier) {
 }
 
 function changePage(page) {
-    // Get current URL and update page parameter
     const currentUrl = new URL(window.location);
     currentUrl.searchParams.set('page', page);
     
@@ -385,7 +388,6 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Handle leaderboard row clicks to navigate to user profile
 document.addEventListener('DOMContentLoaded', function() {
     const leaderboardRows = document.querySelectorAll('.leaderboard-row');
     
@@ -412,5 +414,63 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add hover effect
         row.style.cursor = 'pointer';
     });
+});
+</script>
+
+<!-- Debug script -->
+<script>
+// Debug script để kiểm tra trùng lặp
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DEBUGGING LEADERBOARD ===');
+    
+    const tableBody = document.getElementById('leaderboardTableBody');
+    if (!tableBody) {
+        console.log('Table body not found');
+        return;
+    }
+    
+    const rows = tableBody.querySelectorAll('.leaderboard-row');
+    console.log('Total rows found:', rows.length);
+    
+    // Kiểm tra trùng lặp theo data-user-id
+    const userIds = [];
+    const duplicateIds = [];
+    
+    rows.forEach((row, index) => {
+        const userId = row.getAttribute('data-user-id');
+        const username = row.getAttribute('data-username');
+        
+        console.log(`Row ${index + 1}: User ID = ${userId}, Username = ${username}`);
+        
+        if (userIds.includes(userId)) {
+            duplicateIds.push(userId);
+            console.warn(`DUPLICATE FOUND: User ID ${userId} appears multiple times`);
+        } else {
+            userIds.push(userId);
+        }
+    });
+    
+    if (duplicateIds.length > 0) {
+        console.error('DUPLICATES DETECTED:', duplicateIds);
+    } else {
+        console.log('NO DUPLICATES FOUND');
+    }
+    
+    // Monitor thêm changes
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                console.log('Table body content changed - new nodes added:', mutation.addedNodes.length);
+                
+                // Recheck for duplicates
+                setTimeout(() => {
+                    const newRows = tableBody.querySelectorAll('.leaderboard-row');
+                    console.log('After change - Total rows:', newRows.length);
+                }, 100);
+            }
+        });
+    });
+    
+    observer.observe(tableBody, { childList: true, subtree: true });
 });
 </script>
