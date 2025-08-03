@@ -776,6 +776,27 @@ html {
 	margin: var(--spacing-lg) auto;
 }
 
+.notification-close {
+	background: none;
+	border: none;
+	font-size: 18px;
+	color: #6b7280;
+	cursor: pointer;
+	height: 12px;
+	width: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 12px;
+	margin-left: 12px;
+	border-radius: 50%;
+	transition: background-color 0.2s ease;
+}
+
+.notification-close:hover {
+	background-color: rgba(0, 0, 0, 0.1);
+}
+
 @keyframes spin {
 	0% {
 		transform: rotate(0deg);

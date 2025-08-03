@@ -1201,22 +1201,6 @@
 	line-height: 1.4;
 }
 
-.notification-close {
-	background: none;
-	border: none;
-	font-size: 18px;
-	color: #6b7280;
-	cursor: pointer;
-	padding: 4px;
-	margin-left: 12px;
-	border-radius: 4px;
-	transition: background-color 0.2s ease;
-}
-
-.notification-close:hover {
-	background-color: rgba(0, 0, 0, 0.1);
-}
-
 @media (max-width: 480px) {
 	.popup-notification {
 		right: 10px;
