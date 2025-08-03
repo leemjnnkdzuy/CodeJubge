@@ -52,16 +52,13 @@ class DiscussionModel
             $params['current_user_id'] = $currentUserId;
             $params['current_user_id_like'] = $currentUserId;
         } else {
-            // If no user is logged in, we still need to provide the parameter
             $params['current_user_id'] = null;
             $params['current_user_id_like'] = null;
         }
         
-        // Filter handling
         if ($filter !== 'all' && !empty($filter)) {
             global $DISCUSS_CATEGORIES;
             
-            // Check if filter is a valid category from $DISCUSS_CATEGORIES
             $validCategories = [];
             foreach ($DISCUSS_CATEGORIES as $key => $category) {
                 $validCategories[] = strtolower($key);
@@ -146,11 +143,9 @@ class DiscussionModel
         
         $params = [];
         
-        // Filter handling
         if ($filter !== 'all' && !empty($filter)) {
             global $DISCUSS_CATEGORIES;
             
-            // Check if filter is a valid category from $DISCUSS_CATEGORIES
             $validCategories = [];
             foreach ($DISCUSS_CATEGORIES as $key => $category) {
                 $validCategories[] = strtolower($key);
@@ -333,37 +328,30 @@ class DiscussionModel
     public function toggleLike($userId, $discussionId)
     {
         try {
-            // Start transaction for data consistency
             $this->db->beginTransaction();
             
-            // Get current likes count before any changes
             $currentCountStmt = $this->db->prepare("SELECT likes_count FROM discussions WHERE id = ?");
             $currentCountStmt->execute([$discussionId]);
             $currentData = $currentCountStmt->fetch(PDO::FETCH_ASSOC);
             $currentCount = $currentData ? (int)$currentData['likes_count'] : 0;
             
-            // Check if user has already liked this discussion
             $checkStmt = $this->db->prepare("SELECT id FROM discussion_likes WHERE user_id = ? AND discussion_id = ?");
             $checkStmt->execute([$userId, $discussionId]);
             $existingLike = $checkStmt->fetch(PDO::FETCH_ASSOC);
             
             if ($existingLike) {
-                // User has already liked - remove like (unlike)
                 $deleteStmt = $this->db->prepare("DELETE FROM discussion_likes WHERE user_id = ? AND discussion_id = ?");
                 $deleteStmt->execute([$userId, $discussionId]);
                 
-                // Decrease likes count (ensure it doesn't go below 0)
                 $newCount = max(0, $currentCount - 1);
                 $updateStmt = $this->db->prepare("UPDATE discussions SET likes_count = ? WHERE id = ?");
                 $updateStmt->execute([$newCount, $discussionId]);
                 
                 $action = 'unliked';
             } else {
-                // User hasn't liked yet - add like
                 $insertStmt = $this->db->prepare("INSERT INTO discussion_likes (user_id, discussion_id, created_at) VALUES (?, ?, NOW())");
                 $insertStmt->execute([$userId, $discussionId]);
                 
-                // Increase likes count
                 $newCount = $currentCount + 1;
                 $updateStmt = $this->db->prepare("UPDATE discussions SET likes_count = ? WHERE id = ?");
                 $updateStmt->execute([$newCount, $discussionId]);
@@ -371,13 +359,11 @@ class DiscussionModel
                 $action = 'liked';
             }
             
-            // Commit transaction
             $this->db->commit();
             
             return $action;
             
         } catch (PDOException $e) {
-            // Rollback transaction on error
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
@@ -472,11 +458,13 @@ class DiscussionModel
     public function getDiscussionReplies($discussionId, $page = 1, $limit = 20)
     {
         $offset = ($page - 1) * $limit;
+        $currentUserId = $_SESSION['user_id'] ?? null;
         
         $sql = "SELECT 
                     dr.id,
                     dr.discussion_id,
                     dr.parent_id,
+                    dr.author_id,
                     dr.content,
                     dr.is_solution,
                     dr.likes_count,
@@ -486,9 +474,11 @@ class DiscussionModel
                     u.first_name,
                     u.last_name,
                     u.avatar,
-                    u.badges
+                    u.badges,
+                    CASE WHEN dl.id IS NOT NULL THEN 1 ELSE 0 END as user_liked
                 FROM discussion_replies dr
                 INNER JOIN users u ON dr.author_id = u.id
+                LEFT JOIN discussion_likes dl ON dr.id = dl.reply_id AND dl.user_id = :current_user_id
                 WHERE dr.discussion_id = :discussion_id AND u.is_active = 1
                 ORDER BY dr.is_solution DESC, dr.created_at ASC
                 LIMIT :limit OFFSET :offset";
@@ -496,6 +486,7 @@ class DiscussionModel
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue(':discussion_id', $discussionId, PDO::PARAM_INT);
+            $stmt->bindValue(':current_user_id', $currentUserId, PDO::PARAM_INT);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
@@ -545,6 +536,138 @@ class DiscussionModel
             
         } catch (PDOException $e) {
             error_log("Error checking slug existence: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function createReply($discussionId, $authorId, $content, $parentId = null)
+    {
+        $sql = "INSERT INTO discussion_replies (discussion_id, author_id, content, parent_id, created_at, updated_at)
+                VALUES (:discussion_id, :author_id, :content, :parent_id, NOW(), NOW())";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':discussion_id', $discussionId, PDO::PARAM_INT);
+            $stmt->bindValue(':author_id', $authorId, PDO::PARAM_INT);
+            $stmt->bindValue(':content', $content);
+            $stmt->bindValue(':parent_id', $parentId, PDO::PARAM_INT);
+            
+            if ($stmt->execute()) {
+                $replyId = $this->db->lastInsertId();
+                
+                $updateSql = "UPDATE discussions SET 
+                             replies_count = replies_count + 1,
+                             last_reply_by = :author_id,
+                             last_reply_at = NOW(),
+                             updated_at = NOW()
+                             WHERE id = :discussion_id";
+                
+                $updateStmt = $this->db->prepare($updateSql);
+                $updateStmt->bindValue(':author_id', $authorId, PDO::PARAM_INT);
+                $updateStmt->bindValue(':discussion_id', $discussionId, PDO::PARAM_INT);
+                $updateStmt->execute();
+                
+                return $replyId;
+            }
+            
+            return false;
+            
+        } catch (PDOException $e) {
+            error_log("Error creating reply: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function toggleReplyLike($userId, $replyId)
+    {
+        try {
+            $this->db->beginTransaction();
+            
+            $currentCountStmt = $this->db->prepare("SELECT likes_count FROM discussion_replies WHERE id = ?");
+            $currentCountStmt->execute([$replyId]);
+            $currentData = $currentCountStmt->fetch(PDO::FETCH_ASSOC);
+            $currentCount = $currentData ? (int)$currentData['likes_count'] : 0;
+            
+            $checkStmt = $this->db->prepare("SELECT id FROM discussion_likes WHERE user_id = ? AND reply_id = ?");
+            $checkStmt->execute([$userId, $replyId]);
+            $existingLike = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingLike) {
+                $deleteStmt = $this->db->prepare("DELETE FROM discussion_likes WHERE user_id = ? AND reply_id = ?");
+                $deleteStmt->execute([$userId, $replyId]);
+                $newCount = max(0, $currentCount - 1);
+                $updateStmt = $this->db->prepare("UPDATE discussion_replies SET likes_count = ? WHERE id = ?");
+                $updateStmt->execute([$newCount, $replyId]);
+                
+                $action = 'unliked';
+            } else {
+                $insertStmt = $this->db->prepare("INSERT INTO discussion_likes (user_id, reply_id, created_at) VALUES (?, ?, NOW())");
+                $insertStmt->execute([$userId, $replyId]);
+                $newCount = $currentCount + 1;
+                $updateStmt = $this->db->prepare("UPDATE discussion_replies SET likes_count = ? WHERE id = ?");
+                $updateStmt->execute([$newCount, $replyId]);
+                
+                $action = 'liked';
+            }
+            
+            $this->db->commit();
+            
+            return [
+                'action' => $action,
+                'likes_count' => $newCount
+            ];
+            
+        } catch (PDOException $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("Error toggling reply like: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function markReplyAsSolution($userId, $replyId)
+    {
+        try {
+            $sql = "SELECT dr.discussion_id, d.author_id as discussion_author_id
+                    FROM discussion_replies dr
+                    INNER JOIN discussions d ON dr.discussion_id = d.id
+                    WHERE dr.id = :reply_id";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':reply_id', $replyId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $info = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$info) {
+                return false;
+            }
+            
+            $userRole = $_SESSION['role'] ?? 'user';
+            if ($userId != $info['discussion_author_id'] && !in_array($userRole, ['admin', 'moderator'])) {
+                return false;
+            }
+            
+            $unmarkSql = "UPDATE discussion_replies SET is_solution = 0 WHERE discussion_id = :discussion_id";
+            $unmarkStmt = $this->db->prepare($unmarkSql);
+            $unmarkStmt->bindValue(':discussion_id', $info['discussion_id'], PDO::PARAM_INT);
+            $unmarkStmt->execute();
+            
+            $markSql = "UPDATE discussion_replies SET is_solution = 1 WHERE id = :reply_id";
+            $markStmt = $this->db->prepare($markSql);
+            $markStmt->bindValue(':reply_id', $replyId, PDO::PARAM_INT);
+            $markStmt->execute();
+            
+            $updateDiscussionSql = "UPDATE discussions SET is_solved = 1 WHERE id = :discussion_id";
+            $updateDiscussionStmt = $this->db->prepare($updateDiscussionSql);
+            $updateDiscussionStmt->bindValue(':discussion_id', $info['discussion_id'], PDO::PARAM_INT);
+            $updateDiscussionStmt->execute();
+            
+            return true;
+            
+        } catch (PDOException $e) {
+            error_log("Error marking reply as solution: " . $e->getMessage());
             return false;
         }
     }

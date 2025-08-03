@@ -663,4 +663,180 @@ class DiscussionController extends Controller
         
         return date('d/m/Y', strtotime($datetime));
     }
+    
+    public function createReply()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Bạn cần đăng nhập để trả lời'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        try {
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input) {
+                throw new Exception('Dữ liệu không hợp lệ');
+            }
+            
+            $discussionId = (int)($input['discussion_id'] ?? 0);
+            $content = trim($input['content'] ?? '');
+            $parentId = !empty($input['parent_id']) ? (int)$input['parent_id'] : null;
+            
+            if (!$discussionId) {
+                throw new Exception('ID thảo luận không hợp lệ');
+            }
+            
+            if (empty($content)) {
+                throw new Exception('Nội dung phản hồi không được để trống');
+            }
+            
+            // Check if discussion exists
+            $discussion = $this->discussionModel->getDiscussionById($discussionId);
+            if (!$discussion) {
+                throw new Exception('Thảo luận không tồn tại');
+            }
+            
+            $replyId = $this->discussionModel->createReply($discussionId, $_SESSION['user_id'], $content, $parentId);
+            
+            if ($replyId) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Phản hồi đã được tạo thành công',
+                    'reply_id' => $replyId
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                throw new Exception('Không thể tạo phản hồi');
+            }
+            
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+    
+    public function likeReply()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Bạn cần đăng nhập'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        try {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $replyId = (int)($input['reply_id'] ?? 0);
+            
+            if (!$replyId) {
+                throw new Exception('ID phản hồi không hợp lệ');
+            }
+            
+            $result = $this->discussionModel->toggleReplyLike($_SESSION['user_id'], $replyId);
+            
+            echo json_encode([
+                'success' => true,
+                'action' => $result['action'],
+                'likes_count' => $result['likes_count']
+            ], JSON_UNESCAPED_UNICODE);
+            
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+    
+    public function markSolution()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Bạn cần đăng nhập'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        try {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $replyId = (int)($input['reply_id'] ?? 0);
+            
+            if (!$replyId) {
+                throw new Exception('ID phản hồi không hợp lệ');
+            }
+            
+            $result = $this->discussionModel->markReplyAsSolution($_SESSION['user_id'], $replyId);
+            
+            if ($result) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Đã đánh dấu là giải pháp'
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                throw new Exception('Bạn không có quyền thực hiện hành động này');
+            }
+            
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+    
+    public function getUserInteractions($discussionId)
+    {
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Not logged in'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        try {
+            $userId = $_SESSION['user_id'];
+            $liked = $this->discussionModel->hasUserLiked($userId, $discussionId);
+            $bookmarked = $this->discussionModel->hasUserBookmarked($userId, $discussionId);
+            
+            echo json_encode([
+                'success' => true,
+                'liked' => $liked,
+                'bookmarked' => $bookmarked
+            ], JSON_UNESCAPED_UNICODE);
+            
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Server error'
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
 }

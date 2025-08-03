@@ -18,6 +18,10 @@
         echo '<link rel="stylesheet" href="/css/problemsStyle.css">';
     } elseif (strpos($_SERVER['REQUEST_URI'], '/discussions') === 0) {
         echo '<link rel="stylesheet" href="/css/discussionsStyle.css">';
+        // Check if it's a discussion detail page
+        if (preg_match('/\/discussions\/\d+/', $_SERVER['REQUEST_URI'])) {
+            echo '<link rel="stylesheet" href="/css/discussionDetailStyle.css">';
+        }
     } elseif (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0) {
         echo ' <link rel="stylesheet" href="/css/leaderboardStyle.css">';
     } 
@@ -87,7 +91,6 @@
         window.addEventListener('load', checkScreenSize);
         window.addEventListener('resize', checkScreenSize);
         
-        // Auto show notification if exists
         document.addEventListener('DOMContentLoaded', function() {
             const notification = document.getElementById('popupNotification');
             if (notification) {
@@ -95,7 +98,6 @@
                     notification.classList.add('show');
                 }, 100);
                 
-                // Auto hide after 5 seconds for non-info notifications
                 if (!notification.className.includes('info')) {
                     setTimeout(() => {
                         if (typeof closeNotification === 'function') {
