@@ -14,8 +14,9 @@ class DiscussionModel
     public function getDiscussions($page = 1, $limit = 10, $filter = 'all', $search = '', $sortBy = 'created_at', $sortOrder = 'DESC')
     {
         $offset = ($page - 1) * $limit;
+        $currentUserId = $_SESSION['user_id'] ?? null;
         
-        $sql = "SELECT 
+        $sql = "SELECT DISTINCT
                     d.id,
                     d.title,
                     d.slug,
@@ -35,42 +36,41 @@ class DiscussionModel
                     u.last_name,
                     u.avatar,
                     u.badges,
-                    lr.username as last_reply_username
+                    lr.username as last_reply_username,
+                    CASE WHEN db.id IS NOT NULL THEN 1 ELSE 0 END as is_bookmarked,
+                    CASE WHEN dl.id IS NOT NULL THEN 1 ELSE 0 END as user_liked
                 FROM discussions d
                 INNER JOIN users u ON d.author_id = u.id
                 LEFT JOIN users lr ON d.last_reply_by = lr.id
+                LEFT JOIN discussion_bookmarks db ON d.id = db.discussion_id AND db.user_id = :current_user_id
+                LEFT JOIN discussion_likes dl ON d.id = dl.discussion_id AND dl.user_id = :current_user_id_like
                 WHERE u.is_active = 1";
         
         $params = [];
         
-        switch ($filter) {
-            case 'pinned':
-                $sql .= " AND d.is_pinned = 1";
-                break;
-            case 'solved':
-                $sql .= " AND d.is_solved = 1";
-                break;
-            case 'unsolved':
-                $sql .= " AND d.is_solved = 0";
-                break;
-            case 'algorithm':
-                $sql .= " AND d.category = 'algorithm'";
-                break;
-            case 'data-structure':
-                $sql .= " AND d.category = 'data-structure'";
-                break;
-            case 'math':
-                $sql .= " AND d.category = 'math'";
-                break;
-            case 'beginner':
-                $sql .= " AND d.category = 'beginner'";
-                break;
-            case 'contest':
-                $sql .= " AND d.category = 'contest'";
-                break;
-            case 'help':
-                $sql .= " AND d.category = 'help'";
-                break;
+        if ($currentUserId) {
+            $params['current_user_id'] = $currentUserId;
+            $params['current_user_id_like'] = $currentUserId;
+        } else {
+            // If no user is logged in, we still need to provide the parameter
+            $params['current_user_id'] = null;
+            $params['current_user_id_like'] = null;
+        }
+        
+        // Filter handling
+        if ($filter !== 'all' && !empty($filter)) {
+            global $DISCUSS_CATEGORIES;
+            
+            // Check if filter is a valid category from $DISCUSS_CATEGORIES
+            $validCategories = [];
+            foreach ($DISCUSS_CATEGORIES as $key => $category) {
+                $validCategories[] = strtolower($key);
+            }
+            
+            if (in_array($filter, $validCategories)) {
+                $sql .= " AND d.category = :filter_category";
+                $params['filter_category'] = $filter;
+            }
         }
         
         if (!empty($search)) {
@@ -105,6 +105,25 @@ class DiscussionModel
             $stmt->execute();
             $discussions = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
+            $ids = array_column($discussions, 'id');
+            $uniqueIds = array_unique($ids);
+            if (count($ids) !== count($uniqueIds)) {
+                error_log("DUPLICATE DISCUSSIONS DETECTED in database query!");
+                error_log("Total: " . count($ids) . ", Unique: " . count($uniqueIds));
+                $duplicates = array_diff_assoc($ids, $uniqueIds);
+                error_log("Duplicate IDs: " . implode(', ', $duplicates));
+            }
+            
+            $seenIds = [];
+            $discussions = array_filter($discussions, function($discussion) use (&$seenIds) {
+                if (in_array($discussion['id'], $seenIds)) {
+                    error_log("Removing duplicate discussion ID: " . $discussion['id']);
+                    return false;
+                }
+                $seenIds[] = $discussion['id'];
+                return true;
+            });
+            
             foreach ($discussions as &$discussion) {
                 $discussion['tags'] = json_decode($discussion['tags'], true) ?? [];
                 $discussion['badges'] = json_decode($discussion['badges'], true) ?? [];
@@ -127,34 +146,20 @@ class DiscussionModel
         
         $params = [];
         
-        switch ($filter) {
-            case 'pinned':
-                $sql .= " AND d.is_pinned = 1";
-                break;
-            case 'solved':
-                $sql .= " AND d.is_solved = 1";
-                break;
-            case 'unsolved':
-                $sql .= " AND d.is_solved = 0";
-                break;
-            case 'algorithm':
-                $sql .= " AND d.category = 'algorithm'";
-                break;
-            case 'data-structure':
-                $sql .= " AND d.category = 'data-structure'";
-                break;
-            case 'math':
-                $sql .= " AND d.category = 'math'";
-                break;
-            case 'beginner':
-                $sql .= " AND d.category = 'beginner'";
-                break;
-            case 'contest':
-                $sql .= " AND d.category = 'contest'";
-                break;
-            case 'help':
-                $sql .= " AND d.category = 'help'";
-                break;
+        // Filter handling
+        if ($filter !== 'all' && !empty($filter)) {
+            global $DISCUSS_CATEGORIES;
+            
+            // Check if filter is a valid category from $DISCUSS_CATEGORIES
+            $validCategories = [];
+            foreach ($DISCUSS_CATEGORIES as $key => $category) {
+                $validCategories[] = strtolower($key);
+            }
+            
+            if (in_array($filter, $validCategories)) {
+                $sql .= " AND d.category = :filter_category";
+                $params['filter_category'] = $filter;
+            }
         }
         
         if (!empty($search)) {

@@ -531,7 +531,7 @@ CREATE TABLE `discussions` (
     `slug` VARCHAR(255) NOT NULL UNIQUE,
     `content` TEXT NOT NULL,
     `author_id` INT NOT NULL,
-    `category` ENUM('general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help') DEFAULT 'general',
+    `category` VARCHAR(50) DEFAULT 'general',
     `tags` JSON NOT NULL DEFAULT '[]',
     `is_pinned` BOOLEAN DEFAULT FALSE,
     `is_solved` BOOLEAN DEFAULT FALSE,
@@ -545,6 +545,7 @@ CREATE TABLE `discussions` (
     
     FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`last_reply_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+    CONSTRAINT `chk_category` CHECK (`category` IN ('general', 'problems', 'competitions', 'learning_resources', 'feedback_and_suggestions', 'questions_and_answers', 'events', 'questions', 'other', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help')),
     INDEX `idx_author_id` (`author_id`),
     INDEX `idx_category` (`category`),
     INDEX `idx_is_pinned` (`is_pinned`),
@@ -631,6 +632,11 @@ CREATE PROCEDURE CreateDiscussion(
     IN p_tags JSON
 )
 BEGIN
+    -- Validate category
+    IF p_category NOT IN ('general', 'problems', 'competitions', 'learning_resources', 'feedback_and_suggestions', 'questions_and_answers', 'events', 'questions', 'other', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help') THEN
+        SET p_category = 'general';
+    END IF;
+    
     INSERT INTO discussions (title, slug, content, author_id, category, tags)
     VALUES (p_title, p_slug, p_content, p_author_id, p_category, p_tags);
     
@@ -793,7 +799,7 @@ INSERT INTO discussions (title, slug, content, author_id, category, tags, is_pin
     'how-to-optimize-sorting-algorithms',
     'Mình đang tìm hiểu về các thuật toán sắp xếp và muốn biết cách tối ưu hóa chúng. Hiện tại mình đang sử dụng Quick Sort nhưng trong một số trường hợp performance không được tốt lắm.\n\nCó ai có kinh nghiệm về việc này không? Chia sẻ với mình nhé!',
     1,
-    'algorithm',
+    'problems',
     '["sorting", "optimization", "quicksort", "performance"]',
     FALSE,
     12,
@@ -804,7 +810,7 @@ INSERT INTO discussions (title, slug, content, author_id, category, tags, is_pin
     'bst-vs-avl-tree-when-to-use',
     'Mình đang học về cấu trúc dữ liệu cây và băn khoăn không biết khi nào nên sử dụng BST thông thường và khi nào nên sử dụng AVL Tree.\n\nCó ai có thể giải thích rõ hơn về trade-offs giữa hai loại cây này không?',
     1,
-    'data-structure',
+    'learning_resources',
     '["binary-search-tree", "avl-tree", "balanced-tree", "data-structure"]',
     FALSE,
     8,
@@ -815,7 +821,7 @@ INSERT INTO discussions (title, slug, content, author_id, category, tags, is_pin
     'dynamic-programming-basic-patterns',
     'Mình vừa bắt đầu học Dynamic Programming và thấy có rất nhiều dạng bài khác nhau. Có ai có thể chia sẻ những pattern cơ bản nhất mà người mới học DP cần nắm vững không?\n\nCảm ơn mọi người!',
     1,
-    'algorithm',
+    'questions_and_answers',
     '["dynamic-programming", "patterns", "beginner", "tutorial"]',
     FALSE,
     18,
@@ -826,11 +832,44 @@ INSERT INTO discussions (title, slug, content, author_id, category, tags, is_pin
     'effective-debugging-competitive-programming',
     'Trong lúc thi đấu, việc debug code rất quan trọng nhưng cũng tốn thời gian. Mình muốn hỏi các cao thủ có tips gì để debug nhanh và hiệu quả không?\n\nShare kinh nghiệm với mình nhé!',
     1,
-    'contest',
+    'competitions',
     '["debugging", "competitive-programming", "tips", "contest"]',
     FALSE,
     15,
     9
+),
+(
+    'Thông báo: Cuộc thi lập trình CodeJudge Championship 2025',
+    'codejudge-championship-2025-announcement',
+    'Chúng tôi vui mừng thông báo về cuộc thi lập trình lớn nhất năm - CodeJudge Championship 2025!\n\n🏆 Giải thưởng lên đến 50 triệu VNĐ\n📅 Thời gian: 15/08/2025 - 17/08/2025\n👥 Mở rồng cho tất cả thành viên\n\nĐăng ký ngay tại link: codejudge.com/championship2025',
+    1,
+    'events',
+    '["championship", "contest", "2025", "announcement"]',
+    TRUE,
+    45,
+    23
+),
+(
+    'Góp ý cải thiện hệ thống judge',
+    'feedback-improve-judge-system',
+    'Mình có một số góp ý để cải thiện hệ thống judge của CodeJudge:\n\n1. Thêm support cho Python 3.11\n2. Tăng memory limit cho một số bài\n3. Thêm partial scoring\n4. Custom checker cho bài output không unique\n\nMọi người có ý kiến gì không?',
+    1,
+    'feedback_and_suggestions',
+    '["judge-system", "improvement", "features", "feedback"]',
+    FALSE,
+    22,
+    15
+),
+(
+    'Tài nguyên học thuật toán miễn phí tốt nhất',
+    'best-free-algorithm-learning-resources',
+    'Chia sẻ với mọi người một số tài nguyên học thuật toán miễn phí mà mình đã sử dụng:\n\n📚 Sách: Introduction to Algorithms (CLRS)\n🌐 Website: GeeksforGeeks, LeetCode\n📺 YouTube: Abdul Bari, MIT OpenCourseWare\n💻 Practice: CodeJudge, Codeforces\n\nMọi người có thêm gợi ý nào không?',
+    1,
+    'learning_resources',
+    '["algorithms", "free-resources", "books", "websites", "learning"]',
+    FALSE,
+    67,
+    31
 );
 
 -- Tạo một số replies mẫu
@@ -850,21 +889,3 @@ CREATE INDEX idx_discussions_category_created ON discussions(category, created_a
 CREATE INDEX idx_discussions_pinned_created ON discussions(is_pinned DESC, created_at DESC);
 CREATE INDEX idx_discussions_popularity ON discussions(likes_count DESC, replies_count DESC);
 CREATE INDEX idx_discussion_replies_discussion_created ON discussion_replies(discussion_id, created_at DESC);
-
--- ==================================================
--- HOÀN THÀNH
--- ==================================================
--- Database đã được tạo thành công với:
--- ✓ Bảng users với đầy đủ thông tin
--- ✓ Bảng problems và test cases
--- ✓ Bảng submissions và user_problems
--- ✓ Bảng contests và participants
--- ✓ Bảng sessions và notifications
--- ✓ Bảng discussions và replies (MỚI)
--- ✓ Bảng discussion_likes, views, bookmarks (MỚI)
--- ✓ Admin user mặc định (admin/password)
--- ✓ Stored procedures cho cập nhật thống kê và discussions (MỚI)
--- ✓ Views cho leaderboard, statistics và discussions (MỚI)
--- ✓ Triggers tự động cập nhật timestamps và counters (MỚI)
--- ✓ Indexes tối ưu performance cho discussions (MỚI)
--- ✓ Dữ liệu mẫu cho discussions (MỚI)

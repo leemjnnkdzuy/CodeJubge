@@ -5,100 +5,118 @@ class DiscussionsManager {
         this.hasMore = window.discussionsData?.hasMore !== false;
         this.currentFilter = window.discussionsData?.currentFilter || 'all';
         this.currentSearch = window.discussionsData?.currentSearch || '';
+        this.observer = null;
+        this.loadedDiscussionIds = new Set();
         
-        this.init();
+        this.initialize();
     }
     
-    init() {
-        this.setupEventListeners();
-        if (this.currentPage === 1 && this.hasMore) {
+    initialize() {
+        this.collectExistingDiscussions();
+        
+        this.setupSearchAndFilters();
+        
+        if (this.hasMore && this.currentPage === 1) {
             this.setupInfiniteScroll();
         }
     }
     
-    setupEventListeners() {
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
+    collectExistingDiscussions() {
+        const existingCards = document.querySelectorAll('.discussion-card[data-id]');
+        const seenIds = new Set();
         
-        const toggleSearchButton = () => {
-            const isEmpty = !searchInput.value.trim();
-            searchBtn.disabled = isEmpty;
-            if (isEmpty) {
-                searchBtn.classList.add('disabled');
-            } else {
-                searchBtn.classList.remove('disabled');
-            }
-        };
-        
-        toggleSearchButton();
-        
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            toggleSearchButton();
-            
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.currentSearch = e.target.value;
-                this.navigateToPage();
-            }, 300);
-        });
-        
-        searchBtn.addEventListener('click', (e) => {
-            if (searchBtn.disabled) {
-                e.preventDefault();
-                return;
-            }
-            
-            this.currentSearch = searchInput.value;
-            this.navigateToPage();
-        });
-        
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (!searchBtn.disabled) {
-                    this.currentSearch = searchInput.value;
-                    this.navigateToPage();
+        existingCards.forEach((card, index) => {
+            const id = parseInt(card.getAttribute('data-id'));
+            if (id) {
+                if (seenIds.has(id)) {
+                    card.remove();
+                } else {
+                    seenIds.add(id);
+                    this.loadedDiscussionIds.add(id);
                 }
             }
         });
+    }
+    
+    setupSearchAndFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        
+        if (searchInput && searchBtn) {
+            // Update button state based on input content
+            searchInput.addEventListener('input', (e) => {
+                const isEmpty = !e.target.value.trim();
+                searchBtn.disabled = isEmpty;
+                searchBtn.classList.toggle('disabled', isEmpty);
+            });
+            
+            // Search when click button
+            searchBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const searchValue = searchInput.value.trim();
+                // Always perform search when button is clicked
+                this.navigateToNewPage(this.currentFilter, searchValue);
+            });
+            
+            // Search when press Enter
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const searchValue = e.target.value.trim();
+                    // Always perform search when Enter is pressed
+                    this.navigateToNewPage(this.currentFilter, searchValue);
+                }
+            });
+            
+            // Initialize button state
+            const isEmpty = !searchInput.value.trim();
+            searchBtn.disabled = isEmpty;
+            searchBtn.classList.toggle('disabled', isEmpty);
+        }
         
         const filterBtns = document.querySelectorAll('.filter-btn');
         filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                filterBtns.forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                
-                this.currentFilter = e.target.dataset.filter;
-                this.navigateToPage();
+                const newFilter = btn.dataset.filter;
+                if (newFilter !== this.currentFilter) {
+                    this.navigateToNewPage(newFilter, this.currentSearch);
+                }
             });
         });
     }
     
     setupInfiniteScroll() {
-        const observer = new IntersectionObserver((entries) => {
+        if (this.observer) {
+            this.observer.disconnect();
+        }
+        
+        const trigger = document.getElementById('loadingTrigger');
+        if (!trigger) {
+            return;
+        }
+        
+        this.observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting && !this.isLoading && this.hasMore) {
+                if (entry.isIntersecting && this.hasMore && !this.isLoading) {
                     this.loadMoreDiscussions();
                 }
             });
         }, {
-            rootMargin: '100px'
+            rootMargin: '200px',
+            threshold: 0.1
         });
         
-        const trigger = document.getElementById('loadingTrigger');
-        if (trigger) {
-            observer.observe(trigger);
-        }
+        this.observer.observe(trigger);
     }
     
-    navigateToPage() {
+    navigateToNewPage(filter, search) {
         const params = new URLSearchParams();
-        if (this.currentFilter !== 'all') {
-            params.append('filter', this.currentFilter);
+        
+        if (filter && filter !== 'all') {
+            params.set('filter', filter);
         }
-        if (this.currentSearch) {
-            params.append('search', this.currentSearch);
+        if (search && search.trim()) {
+            params.set('search', search.trim());
         }
         
         const url = '/discussions' + (params.toString() ? '?' + params.toString() : '');
@@ -106,67 +124,98 @@ class DiscussionsManager {
     }
     
     async loadMoreDiscussions() {
-        if (this.isLoading || !this.hasMore) return;
+        if (this.isLoading || !this.hasMore) {
+            return;
+        }
         
         this.isLoading = true;
-        this.showLoading();
+        this.showLoadingIndicator(true);
         
         try {
             const nextPage = this.currentPage + 1;
+            
             const params = new URLSearchParams({
                 page: nextPage,
+                limit: 10,
                 filter: this.currentFilter,
                 search: this.currentSearch
             });
             
-            const response = await fetch(`/discussions/api?${params.toString()}`);
+            const response = await fetch(`/api/discussions?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
             
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to load discussions');
-            }
-            
-            const discussions = data.data.discussions;
-            
-            if (discussions.length === 0) {
+            if (data.success && data.discussions && Array.isArray(data.discussions)) {
+                const newDiscussions = this.filterNewDiscussions(data.discussions);
+                
+                if (newDiscussions.length > 0) {
+                    this.renderNewDiscussions(newDiscussions);
+                    this.currentPage = nextPage;
+                }
+                
+                this.hasMore = data.has_more === true && newDiscussions.length > 0;
+                
+                if (!this.hasMore) {
+                    this.destroyInfiniteScroll();
+                }
+            } else {
                 this.hasMore = false;
-                this.hideLoading();
-                return;
+                this.destroyInfiniteScroll();
             }
-            
-            this.renderDiscussions(discussions);
-            this.currentPage = nextPage;
-            this.hasMore = data.data.pagination.has_more;
             
         } catch (error) {
-            console.error('Error loading discussions:', error);
-            this.showError('Không thể tải thêm thảo luận. Vui lòng thử lại.');
+            this.showNotification('Không thể tải thêm bài viết. Vui lòng thử lại.', 'error');
+            this.hasMore = false;
+            this.destroyInfiniteScroll();
         } finally {
             this.isLoading = false;
-            this.hideLoading();
+            this.showLoadingIndicator(false);
         }
     }
     
-    renderDiscussions(discussions) {
-        const discussionsList = document.getElementById('discussionsList');
-        
-        discussions.forEach(discussion => {
-            const discussionElement = this.createDiscussionElement(discussion);
-            discussionsList.appendChild(discussionElement);
+    filterNewDiscussions(discussions) {
+        return discussions.filter(discussion => {
+            const id = parseInt(discussion.id);
+            return !this.loadedDiscussionIds.has(id);
         });
     }
     
-    createDiscussionElement(discussion) {
-        const div = document.createElement('div');
-        div.className = `discussion-card ${discussion.is_pinned ? 'pinned' : ''} ${discussion.is_solved ? 'solved' : ''}`;
-        div.setAttribute('data-id', discussion.id);
-        div.onclick = () => this.openDiscussion(discussion.id);
+    renderNewDiscussions(discussions) {
+        const discussionsList = document.getElementById('discussionsList');
+        if (!discussionsList) {
+            return;
+        }
         
+        const fragment = document.createDocumentFragment();
+        
+        discussions.forEach(discussion => {
+            const id = parseInt(discussion.id);
+            
+            if (this.loadedDiscussionIds.has(id)) {
+                return;
+            }
+            
+            const element = this.createDiscussionElement(discussion);
+            if (element) {
+                fragment.appendChild(element);
+                this.loadedDiscussionIds.add(id);
+            }
+        });
+        
+        discussionsList.appendChild(fragment);
+    }
+    
+    createDiscussionElement(discussion) {
         const categoryMap = {
             'general': 'Tổng Quát',
             'algorithm': 'Thuật Toán',
@@ -177,6 +226,23 @@ class DiscussionsManager {
             'help': 'Trợ Giúp'
         };
         
+        const div = document.createElement('div');
+        div.className = `discussion-card ${discussion.is_pinned ? 'pinned' : ''} ${discussion.is_solved ? 'solved' : ''}`;
+        div.setAttribute('data-id', discussion.id);
+        
+        const authorData = discussion.author || discussion;
+        const firstName = authorData.first_name || '';
+        const lastName = authorData.last_name || '';
+        const username = authorData.username || '';
+        const avatar = authorData.avatar || '/assets/default-avatar.png';
+        
+        let tagsHtml = '';
+        if (discussion.tags && Array.isArray(discussion.tags)) {
+            tagsHtml = discussion.tags.slice(0, 3).map(tag => 
+                `<span class="discussion-tag">${this.escapeHtml(tag)}</span>`
+            ).join('');
+        }
+        
         const currentUserId = window.currentUserId || null;
         const isAuthor = currentUserId && discussion.author_id == currentUserId;
         
@@ -185,15 +251,14 @@ class DiscussionsManager {
             ${discussion.is_solved ? '<div class="solved-indicator"><i class="bx bx-check-circle"></i> Đã được giải quyết</div>' : ''}
             
             <div class="discussion-header">
-                <img src="${discussion.author.avatar}" alt="${discussion.author.username}" class="discussion-avatar">
+                <img src="${this.escapeHtml(avatar)}" 
+                     alt="${this.escapeHtml(username)}" class="discussion-avatar"
+                     onerror="this.src='/assets/default-avatar.png'">
                 <div class="discussion-meta">
                     <h3 class="discussion-title">${this.escapeHtml(discussion.title)}</h3>
                     <div class="discussion-author">
-                        <span>${this.escapeHtml(discussion.author.first_name + ' ' + discussion.author.last_name)}</span>
-                        <div class="discussion-badges">
-                            ${discussion.author.badges.map(badge => `<span class="author-badge">${this.escapeHtml(badge)}</span>`).join('')}
-                        </div>
-                        <span class="discussion-time">• ${discussion.time_ago}</span>
+                        <span>${this.escapeHtml(firstName + ' ' + lastName)}</span>
+                        <span class="discussion-time">${discussion.time_ago || 'Unknown'}</span>
                     </div>
                 </div>
                 <div class="discussion-options">
@@ -201,9 +266,11 @@ class DiscussionsManager {
                         <i class="bx bx-dots-horizontal-rounded"></i>
                     </button>
                     <div class="discussion-dropdown" id="discussionMenu${discussion.id}">
-                        <button class="discussion-dropdown-item" onclick="event.stopPropagation(); bookmarkDiscussion(${discussion.id})">
-                            <i class="bx bx-bookmark"></i>
-                            <span>Lưu bài viết</span>
+                        <button class="discussion-dropdown-item ${discussion.is_bookmarked ? 'bookmarked' : ''}" 
+                                data-discussion-id="${discussion.id}"
+                                onclick="event.stopPropagation(); bookmarkDiscussion(${discussion.id})">
+                            <i class="bx ${discussion.is_bookmarked ? 'bxs-bookmark' : 'bx-bookmark'}"></i>
+                            <span>${discussion.is_bookmarked ? 'Đã lưu' : 'Lưu bài viết'}</span>
                         </button>
                         ${isAuthor ? `
                             <button class="discussion-dropdown-item edit" onclick="event.stopPropagation(); editDiscussion(${discussion.id})">
@@ -221,12 +288,12 @@ class DiscussionsManager {
             
             <div class="discussion-content">
                 <div class="discussion-text">
-                    ${this.escapeHtml(discussion.content)}
+                    ${this.escapeHtml(discussion.content || '').substring(0, 200)}${(discussion.content || '').length > 200 ? '...' : ''}
                 </div>
                 
                 <div class="discussion-tags">
                     <span class="discussion-tag ${discussion.category}">${categoryMap[discussion.category] || discussion.category}</span>
-                    ${discussion.tags.slice(0, 3).map(tag => `<span class="discussion-tag">${this.escapeHtml(tag)}</span>`).join('')}
+                    ${tagsHtml}
                 </div>
             </div>
             
@@ -236,11 +303,11 @@ class DiscussionsManager {
                          data-discussion-id="${discussion.id}"
                          title="${discussion.user_liked ? 'Bỏ thích' : 'Thích'}">
                         <i class="bx ${discussion.user_liked ? 'bxs-heart' : 'bx-heart'}"></i>
-                        <span>${discussion.likes_count}</span>
+                        <span>${discussion.likes_count || 0}</span>
                     </div>
                     <div class="discussion-stat replies">
                         <i class="bx bx-message-rounded"></i>
-                        <span>${discussion.replies_count}</span>
+                        <span>${discussion.replies_count || 0}</span>
                     </div>
                 </div>
                 <div class="discussion-actions">
@@ -251,10 +318,15 @@ class DiscussionsManager {
             </div>
         `;
         
+        div.addEventListener('click', () => {
+            window.location.href = `/discussions/${discussion.id}`;
+        });
+        
         return div;
     }
     
     escapeHtml(text) {
+        if (!text) return '';
         const map = {
             '&': '&amp;',
             '<': '&lt;',
@@ -262,333 +334,501 @@ class DiscussionsManager {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
     }
     
-    showLoading() {
-        const discussionsList = document.getElementById('discussionsList');
-        const existingSpinner = document.getElementById('loadingSpinner');
+    showLoadingIndicator(show) {
+        let indicator = document.getElementById('loadingIndicator');
         
-        if (!existingSpinner) {
-            const spinner = document.createElement('div');
-            spinner.id = 'loadingSpinner';
-            spinner.className = 'loading-spinner';
-            spinner.innerHTML = '<div class="spinner"></div>Đang tải thêm...';
-            discussionsList.appendChild(spinner);
+        if (show && !indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'loadingIndicator';
+            indicator.className = 'loading-indicator';
+            indicator.innerHTML = `
+                <div class="loading-content">
+                    <i class="bx bx-loader-alt bx-spin"></i>
+                    <span>Đang tải thêm bài viết...</span>
+                </div>
+            `;
+            
+            const trigger = document.getElementById('loadingTrigger');
+            if (trigger) {
+                trigger.parentNode.insertBefore(indicator, trigger);
+            }
+        }
+        
+        if (indicator) {
+            indicator.style.display = show ? 'block' : 'none';
         }
     }
     
-    hideLoading() {
-        const spinner = document.getElementById('loadingSpinner');
-        if (spinner) {
-            spinner.remove();
+    showNotification(message, type = 'info') {
+        if (typeof showNotification === 'function') {
+            showNotification(message, type);
+            return;
+        }
+        
+        alert(message);
+    }
+    
+    destroyInfiniteScroll() {
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
         }
     }
     
-    showError(message) {
-        const discussionsList = document.getElementById('discussionsList');
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'empty-state';
-        errorDiv.innerHTML = `
-            <i class="bx bx-error"></i>
-            <h3>Có lỗi xảy ra</h3>
-            <p>${message}</p>
-            <button class="new-post-btn" onclick="window.location.reload()">Thử lại</button>
-        `;
-        discussionsList.appendChild(errorDiv);
+    destroy() {
+        this.destroyInfiniteScroll();
+        this.loadedDiscussionIds.clear();
     }
-    
-    openDiscussion(id) {
-        window.location.href = `/discussions/${id}`;
-    }
+}
+
+function openDiscussion(id) {
+    window.location.href = `/discussions/${id}`;
 }
 
 function toggleDiscussionMenu(discussionId) {
     const menu = document.getElementById(`discussionMenu${discussionId}`);
-    const button = menu.closest('.discussion-options').querySelector('.discussion-menu-btn');
-    const allMenus = document.querySelectorAll('.discussion-dropdown');
-    const allButtons = document.querySelectorAll('.discussion-menu-btn');
+    if (!menu) return;
     
-    allMenus.forEach(m => {
-        if (m.id !== `discussionMenu${discussionId}`) {
-            m.classList.remove('show');
-        }
+    const button = menu.closest('.discussion-options')?.querySelector('.discussion-menu-btn');
+    
+    document.querySelectorAll('.discussion-dropdown').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
     });
-    
-    allButtons.forEach(btn => {
-        if (btn !== button) {
-            btn.classList.remove('active');
-        }
+    document.querySelectorAll('.discussion-menu-btn').forEach(btn => {
+        if (btn !== button) btn.classList.remove('active');
     });
     
     const isShowing = menu.classList.toggle('show');
-    if (isShowing) {
-        button.classList.add('active');
-    } else {
-        button.classList.remove('active');
+    if (button) {
+        button.classList.toggle('active', isShowing);
     }
 }
 
-document.addEventListener('click', function(event) {
-    if (!event.target.closest('.discussion-options')) {
-        const allMenus = document.querySelectorAll('.discussion-dropdown');
-        const allButtons = document.querySelectorAll('.discussion-menu-btn');
-        
-        allMenus.forEach(menu => menu.classList.remove('show'));
-        allButtons.forEach(button => button.classList.remove('active'));
-    }
-});
-
-function editDiscussion(id) {
-    window.location.href = `/discussions/${id}/edit`;
-}
-
-async function deleteDiscussion(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.')) {
-        return;
-    }
-    
+async function editDiscussion(id) {
     try {
-        const response = await fetch(`/discussions/${id}/delete`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return;
+        const response = await fetch(`/api/discussions/${id}/edit`);
+        if (!response.ok) {
+            throw new Error('Không thể tải dữ liệu bài viết');
         }
         
-        const data = await response.json();
+        const discussion = await response.json();
         
-        if (data.success) {
-            const card = document.querySelector(`[data-id="${id}"]`);
-            if (card) {
-                card.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => {
-                    card.remove();
-                }, 300);
-            }
-            showNotification('Bài viết đã được xóa thành công!', 'success');
-        } else {
-            showNotification(data.message || 'Có lỗi xảy ra khi xóa bài viết!', 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting discussion:', error);
-        showNotification('Có lỗi xảy ra khi xóa bài viết!', 'error');
-    }
-}
-
-function createNewPost() {
-    window.location.href = '/discussions/create';
-}
-
-class LikeManager {
-    constructor() {
-        this.activeRequests = new Map();
-        this.retryAttempts = new Map();
-        this.maxRetries = 3;
-        this.setupEventDelegation();
-    }
-    
-    setupEventDelegation() {
-        document.removeEventListener('click', this.handleLikeClick);
+        // Show modal first
+        showEditPostModal();
         
-        this.handleLikeClick = this.handleLikeClick.bind(this);
-        document.addEventListener('click', this.handleLikeClick);
-    }
-    
-    handleLikeClick(event) {
-        const likeElement = event.target.closest('.discussion-stat.likes');
-        if (!likeElement) return;
-        
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        
-        const discussionId = likeElement.getAttribute('data-discussion-id');
-        if (!discussionId) {
-            return;
-        }
-        
-        this.toggleLike(discussionId);
-    }
-    
-    async toggleLike(discussionId) {
-        if (this.activeRequests.has(discussionId)) {
-            return false;
-        }
-        
-        this.activeRequests.set(discussionId, true);
-        
-        try {
-            const card = this.findDiscussionCard(discussionId);
-            if (!card) {
-                throw new Error(`Discussion card ${discussionId} not found`);
-            }
-            
-            const likeStat = card.querySelector('.discussion-stat.likes');
-            if (!likeStat) {
-                throw new Error(`Like element not found for discussion ${discussionId}`);
-            }
-            
-            const wasLiked = likeStat.classList.contains('liked');
-            const currentCount = parseInt(likeStat.querySelector('span').textContent) || 0;
-            
-            const response = await this.makeAPIRequest(discussionId);
-            
-            if (response.success) {
-                const serverLiked = response.action === 'liked';
-                const serverCount = response.likes_count;
-                
-                this.updateLikeUI(likeStat, serverLiked, serverCount);
-                return true;
-            } else {
-                return false;
-            }
-            
-        } catch (error) {
-            return false;
-        } finally {
-            this.activeRequests.delete(discussionId);
-        }
-    }
-    
-    findDiscussionCard(discussionId) {
-        const selectors = [
-            `.discussion-card[data-id="${discussionId}"]`,
-            `[data-id="${discussionId}"].discussion-card`,
-            `#discussion-${discussionId}`,
-        ];
-        
-        let foundElements = [];
-        
-        for (const selector of selectors) {
-            try {
-                const elements = document.querySelectorAll(selector);
-                if (elements.length > 0) {
-                    foundElements = foundElements.concat(Array.from(elements));
-                }
-            } catch (e) {
-                continue;
-            }
-        }
-        
-        const uniqueElements = [...new Set(foundElements)];
-        
-        if (uniqueElements.length > 0) {
-            return uniqueElements[0];
-        }
-        
-        return null;
-    }
-    
-    updateLikeUI(likeStat, isLiked, count) {
-        const icon = likeStat.querySelector('i');
-        const countSpan = likeStat.querySelector('span');
-        
-        if (!icon || !countSpan) {
-            return;
-        }
-        
-        if (isLiked) {
-            likeStat.classList.add('liked');
-            icon.className = 'bx bxs-heart';
-            likeStat.title = 'Bỏ thích';
-        } else {
-            likeStat.classList.remove('liked');
-            icon.className = 'bx bx-heart';
-            likeStat.title = 'Thích';
-        }
-        
-        countSpan.textContent = Math.max(0, count);
-        
-        this.addLikeAnimation(icon);
-    }
-    
-    addLikeAnimation(icon) {
-        icon.style.animation = 'likeAnimation 0.3s ease';
+        // Use longer delay and check if elements exist
         setTimeout(() => {
-            icon.style.animation = '';
+            populateEditForm(discussion);
+        }, 100);
+        
+        } catch (error) {
+            showNotification('Có lỗi xảy ra khi tải dữ liệu bài viết', 'error');
+        }
+    }function populateEditForm(discussion) {
+    const checkElements = () => {
+        const elements = {
+            id: document.getElementById('editPostId'),
+            title: document.getElementById('editPostTitle'),
+            category: document.getElementById('editPostCategory'),
+            content: document.getElementById('editPostContent'),
+            tags: document.getElementById('editPostTags')
+        };
+        
+        const allExist = Object.values(elements).every(el => el !== null);
+        
+        if (allExist) {
+            elements.id.value = discussion.id;
+            elements.title.value = discussion.title || '';
+            elements.content.value = discussion.content || '';
+            elements.tags.value = discussion.tags ? discussion.tags.join(', ') : '';
+            
+            if (discussion.category) {
+                elements.category.value = discussion.category;
+                
+                setTimeout(() => {
+                    if (elements.category.value !== discussion.category) {
+                        elements.category.value = discussion.category;
+                    }
+                }, 10);
+                
+                elements.category.dispatchEvent(new Event('change'));
+            }
+            
+            window.originalFormData = {
+                title: discussion.title || '',
+                category: discussion.category || '',
+                content: discussion.content || '',
+                tags: discussion.tags ? discussion.tags.join(', ') : ''
+            };
+            
+            setTimeout(() => {
+                setupEditPostForm();
+            }, 50);
+        } else {
+            setTimeout(checkElements, 50);
+        }
+    };
+    
+    checkElements();
+}
+
+function showEditPostModal() {
+    const modal = document.getElementById('editPostModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        
+        const form = document.getElementById('editPostForm');
+        if (form) {
+            form.reset();
+        }
+    }
+}
+
+function closeEditPostModal() {
+    const modal = document.getElementById('editPostModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
         }, 300);
+        
+        document.getElementById('editPostForm').reset();
+    }
+}
+
+function setupEditPostForm() {
+    const form = document.getElementById('editPostForm');
+    if (!form) return;
+    
+    const currentValues = {
+        id: document.getElementById('editPostId')?.value || '',
+        title: document.getElementById('editPostTitle')?.value || '',
+        category: document.getElementById('editPostCategory')?.value || '',
+        content: document.getElementById('editPostContent')?.value || '',
+        tags: document.getElementById('editPostTags')?.value || ''
+    };
+    
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    setTimeout(() => {
+        const elements = {
+            id: document.getElementById('editPostId'),
+            title: document.getElementById('editPostTitle'),
+            category: document.getElementById('editPostCategory'),
+            content: document.getElementById('editPostContent'),
+            tags: document.getElementById('editPostTags')
+        };
+        
+        if (elements.id) elements.id.value = currentValues.id;
+        if (elements.title) elements.title.value = currentValues.title;
+        if (elements.category) {
+            elements.category.value = currentValues.category;
+        }
+        if (elements.content) elements.content.value = currentValues.content;
+        if (elements.tags) elements.tags.value = currentValues.tags;
+    }, 10);
+    
+    const submitBtn = newForm.querySelector('.discussions-btn-submit');
+    
+    function checkForChanges() {
+        if (!window.originalFormData) {
+            return false;
+        }
+        
+        const currentData = {
+            title: document.getElementById('editPostTitle')?.value || '',
+            category: document.getElementById('editPostCategory')?.value || '',
+            content: document.getElementById('editPostContent')?.value || '',
+            tags: document.getElementById('editPostTags')?.value || ''
+        };
+        
+        const hasChanges = (
+            currentData.title.trim() !== window.originalFormData.title.trim() ||
+            currentData.category !== window.originalFormData.category ||
+            currentData.content.trim() !== window.originalFormData.content.trim() ||
+            currentData.tags.trim() !== window.originalFormData.tags.trim()
+        );
+        
+        if (submitBtn) {
+            submitBtn.disabled = !hasChanges;
+            submitBtn.style.opacity = hasChanges ? '1' : '0.6';
+            submitBtn.style.cursor = hasChanges ? 'pointer' : 'not-allowed';
+        }
+        
+        return hasChanges;
     }
     
-    async makeAPIRequest(discussionId) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const fields = ['editPostTitle', 'editPostCategory', 'editPostContent', 'editPostTags'];
+    fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', checkForChanges);
+            field.addEventListener('change', checkForChanges);
+            field.addEventListener('keyup', checkForChanges);
+        }
+    });
+    
+    setTimeout(() => {
+        checkForChanges();
+    }, 300);
+    
+    newForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!checkForChanges()) {
+            showNotification('Không có thay đổi nào để cập nhật', 'warning');
+            return;
+        }
+        
+        const originalText = submitBtn.innerHTML;
         
         try {
-            const response = await fetch('/discussions/like', {
-                method: 'POST',
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="discussions-loading-spinner"></div> Đang cập nhật...';
+            
+            const formData = new FormData(newForm);
+            const data = {
+                id: formData.get('post_id'),
+                title: formData.get('title'),
+                category: formData.get('category'),
+                content: formData.get('content'),
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag) : []
+            };
+            
+            const response = await fetch(`/api/discussions/${data.id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
-                    discussion_id: parseInt(discussionId)
-                }),
-                signal: controller.signal
+                body: JSON.stringify(data)
             });
             
-            clearTimeout(timeoutId);
-            
-            if (response.status === 401) {
-                window.location.href = '/login';
-                return { success: false, error: 'Authentication required' };
-            }
-            
-            const data = await response.json();
-            
             if (!response.ok) {
-                throw new Error(data.error || `HTTP ${response.status}`);
+                throw new Error('Có lỗi xảy ra khi cập nhật bài viết');
             }
             
-            return data;
+            const result = await response.json();
+            
+            showNotification('Cập nhật bài viết thành công!', 'success');
+            closeEditPostModal();
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
             
         } catch (error) {
-            clearTimeout(timeoutId);
-            
-            if (error.name === 'AbortError') {
-                throw new Error('Request timed out');
+            showNotification(error.message || 'Có lỗi xảy ra khi cập nhật bài viết', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+}
+
+async function deleteDiscussion(id) {
+    showDeleteModal(id);
+}
+
+function showDeleteModal(discussionId) {
+    const modal = document.getElementById('deleteConfirmModal');
+    if (!modal) {
+        return;
+    }
+    
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    
+    document.body.style.overflow = 'hidden';
+    
+    setupDeleteModalHandlers(discussionId);
+}
+
+function hideDeleteModal() {
+    const modal = document.getElementById('deleteConfirmModal');
+    if (!modal) return;
+    
+    modal.classList.remove('show');
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+    
+    cleanupDeleteModalHandlers();
+}
+
+function setupDeleteModalHandlers(discussionId) {
+    const confirmBtn = document.getElementById('confirmDelete');
+    const cancelBtn = document.getElementById('cancelDelete');
+    const modal = document.getElementById('deleteConfirmModal');
+    
+    window.deleteModalHandlers = {
+        confirm: () => handleConfirmDelete(discussionId),
+        cancel: () => handleCancelDelete(),
+        overlay: (e) => handleOverlayClick(e, modal)
+    };
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', window.deleteModalHandlers.confirm);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', window.deleteModalHandlers.cancel);
+    }
+    
+    if (modal) {
+        modal.addEventListener('click', window.deleteModalHandlers.overlay);
+    }
+    
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+function cleanupDeleteModalHandlers() {
+    const confirmBtn = document.getElementById('confirmDelete');
+    const cancelBtn = document.getElementById('cancelDelete');
+    const modal = document.getElementById('deleteConfirmModal');
+    
+    if (confirmBtn && window.deleteModalHandlers) {
+        confirmBtn.removeEventListener('click', window.deleteModalHandlers.confirm);
+    }
+    
+    if (cancelBtn && window.deleteModalHandlers) {
+        cancelBtn.removeEventListener('click', window.deleteModalHandlers.cancel);
+    }
+    
+    if (modal && window.deleteModalHandlers) {
+        modal.removeEventListener('click', window.deleteModalHandlers.overlay);
+    }
+    
+    document.removeEventListener('keydown', handleEscapeKey);
+    
+    delete window.deleteModalHandlers;
+}
+
+function handleConfirmDelete(discussionId) {
+    performDeleteDiscussion(discussionId);
+}
+
+function handleCancelDelete() {
+    hideDeleteModal();
+}
+
+function handleOverlayClick(e, modal) {
+    if (e.target === modal) {
+        hideDeleteModal();
+    }
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        hideDeleteModal();
+    }
+}
+
+async function performDeleteDiscussion(id) {
+    const confirmBtn = document.getElementById('confirmDelete');
+    
+    try {
+        if (confirmBtn) {
+            confirmBtn.classList.add('loading');
+            confirmBtn.innerHTML = '<i class="bx bx-loader-alt"></i> Đang xóa...';
+            confirmBtn.disabled = true;
+        }
+        
+        const response = await fetch(`/api/discussions/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            hideDeleteModal();
             
-            throw error;
+            const discussionCard = document.querySelector(`[data-id="${id}"]`);
+            if (discussionCard) {
+                discussionCard.style.transition = 'all 0.5s ease';
+                discussionCard.style.opacity = '0';
+                discussionCard.style.transform = 'translateX(-100%) scale(0.8)';
+                
+                setTimeout(() => {
+                    discussionCard.remove();
+                    showNotification('Đã xóa bài viết thành công!', 'success');
+                }, 500);
+                
+                if (window.discussionsManager && window.discussionsManager.loadedDiscussionIds) {
+                    window.discussionsManager.loadedDiscussionIds.delete(parseInt(id));
+                }
+            }
+        } else {
+            hideDeleteModal();
+            showNotification(result.message || 'Có lỗi xảy ra khi xóa bài viết!', 'error');
+        }
+    } catch (error) {
+        hideDeleteModal();
+        showNotification('Có lỗi xảy ra khi xóa bài viết!', 'error');
+    } finally {
+        if (confirmBtn) {
+            confirmBtn.classList.remove('loading');
+            confirmBtn.innerHTML = '<i class="bx bx-trash"></i> Xóa bài viết';
+            confirmBtn.disabled = false;
         }
     }
 }
 
-const likeManager = new LikeManager();
-
-async function likeDiscussion(id) {
-    return false;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-});
-
 async function bookmarkDiscussion(id) {
     try {
-        const response = await fetch('/discussions/bookmark', {
+        const response = await fetch('/api/discussions/bookmark', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ discussion_id: id })
         });
         
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return;
-        }
+        const result = await response.json();
         
-        const data = await response.json();
-        
-        if (data.success) {
-            const message = data.action === 'bookmarked' ? 'Đã lưu thảo luận!' : 'Đã bỏ lưu thảo luận!';
+        // Update UI to reflect bookmark status
+        const bookmarkBtn = document.querySelector(`#discussionMenu${id} .discussion-dropdown-item[data-discussion-id="${id}"]`);
+        if (bookmarkBtn) {
+            const icon = bookmarkBtn.querySelector('i');
+            const text = bookmarkBtn.querySelector('span');
+            
+            if (result.action === 'bookmarked') {
+                // Change to bookmarked state (yellow/gold)
+                bookmarkBtn.classList.add('bookmarked');
+                if (icon) {
+                    icon.className = 'bx bxs-bookmark'; // Solid bookmark icon
+                }
+                if (text) {
+                    text.textContent = 'Đã lưu';
+                }
+                showNotification('Đã lưu bài viết', 'success');
+            } else {
+                // Change to unbookmarked state
+                bookmarkBtn.classList.remove('bookmarked');
+                if (icon) {
+                    icon.className = 'bx bx-bookmark'; // Outline bookmark icon
+                }
+                if (text) {
+                    text.textContent = 'Lưu bài viết';
+                }
+                showNotification('Đã bỏ lưu bài viết', 'info');
+            }
         }
     } catch (error) {
-        console.error('Error bookmarking discussion:', error);
+        showNotification('Có lỗi xảy ra', 'error');
     }
 }
 
@@ -597,37 +837,99 @@ function shareDiscussion(id) {
     
     if (navigator.share) {
         navigator.share({
-            title: 'Thảo luận thú vị trên CodeJudge',
+            title: 'Chia sẻ thảo luận',
             url: url
         });
     } else {
         navigator.clipboard.writeText(url).then(() => {
-            alert('Đã sao chép link vào clipboard!');
+            showNotification('Đã sao chép link vào clipboard', 'success');
         }).catch(() => {
-            const textArea = document.createElement('textarea');
-            textArea.value = url;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            alert('Đã sao chép link vào clipboard!');
+            showNotification('Không thể sao chép link', 'error');
         });
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.discussionsManager = new DiscussionsManager();
-});
+class LikeManager {
+    constructor() {
+        this.setupEventDelegation();
+    }
+    
+    setupEventDelegation() {
+        document.addEventListener('click', (event) => {
+            const likeStat = event.target.closest('.discussion-stat.likes');
+            if (likeStat) {
+                this.handleLikeClick(event);
+            }
+        });
+    }
+    
+    handleLikeClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const likeStat = event.target.closest('.discussion-stat.likes');
+        const discussionId = likeStat.getAttribute('data-discussion-id');
+        
+        if (discussionId) {
+            this.toggleLike(discussionId);
+        }
+    }
+    
+    async toggleLike(discussionId) {
+        const likeStat = document.querySelector(`.discussion-stat.likes[data-discussion-id="${discussionId}"]`);
+        if (!likeStat) return;
+        
+        const icon = likeStat.querySelector('i');
+        const countSpan = likeStat.querySelector('span');
+        
+        likeStat.style.pointerEvents = 'none';
+        
+        try {
+            const response = await fetch('/api/discussions/like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ discussion_id: discussionId })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                const isLiked = result.action === 'liked';
+                const newCount = result.likes_count || 0;
+                
+                if (isLiked) {
+                    likeStat.classList.add('liked');
+                    icon.className = 'bx bxs-heart';
+                    likeStat.title = 'Bỏ thích';
+                    
+                    icon.style.transform = 'scale(1.3)';
+                    setTimeout(() => {
+                        icon.style.transform = 'scale(1)';
+                    }, 200);
+                } else {
+                    likeStat.classList.remove('liked');
+                    icon.className = 'bx bx-heart';
+                    likeStat.title = 'Thích';
+                }
+                
+                countSpan.textContent = newCount;
+            }
+        } catch (error) {
+            showNotification('Không thể thực hiện hành động này', 'error');
+        } finally {
+            likeStat.style.pointerEvents = 'auto';
+        }
+    }
+}
 
 function createNewPost() {
     const modal = document.getElementById('createPostModal');
     if (modal) {
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
-        
-        setTimeout(() => {
-            document.getElementById('postTitle').focus();
-        }, 100);
     }
 }
 
@@ -635,79 +937,30 @@ function closeCreatePostModal() {
     const modal = document.getElementById('createPostModal');
     if (modal) {
         modal.classList.remove('show');
-        document.body.style.overflow = '';
+        document.body.style.overflow = 'auto';
         
-        document.getElementById('createPostForm').reset();
+        const form = document.getElementById('createPostForm');
+        if (form) {
+            form.reset();
+            const errorGroups = form.querySelectorAll('.discussions-form-group.error');
+            errorGroups.forEach(group => {
+                group.classList.remove('error');
+                const errorMsg = group.querySelector('.discussions-error-message');
+                if (errorMsg) errorMsg.remove();
+            });
+        }
     }
 }
 
-document.addEventListener('click', function(event) {
-    const modal = document.getElementById('createPostModal');
-    if (event.target === modal) {
-        closeCreatePostModal();
-    }
-});
-
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeCreatePostModal();
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('createPostForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            const data = {
-                title: formData.get('title').trim(),
-                category: formData.get('category'),
-                content: formData.get('content').trim(),
-                tags: formData.get('tags').trim()
-            };
-            
-            if (!data.title || !data.category || !data.content) {
-                showNotification('Vui lòng điền đầy đủ thông tin bắt buộc!', 'error');
-                return;
-            }
-            
-            if (data.title.length < 10) {
-                showNotification('Tiêu đề phải có ít nhất 10 ký tự!', 'error');
-                return;
-            }
-            
-            if (data.content.length < 20) {
-                showNotification('Nội dung phải có ít nhất 20 ký tự!', 'error');
-                return;
-            }
-            
-            if (data.tags) {
-                const tags = data.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-                if (tags.length > 5) {
-                    showNotification('Tối đa 5 tags!', 'error');
-                    return;
-                }
-                data.tags = tags;
-            } else {
-                data.tags = [];
-            }
-            
-            submitNewPost(data);
-        });
-    }
-});
-
 function submitNewPost(data) {
-    const submitBtn = document.querySelector('#createPostForm .btn-primary');
+    const submitBtn = document.querySelector('#createPostForm .discussions-btn-submit');
+    if (!submitBtn) return;
+    
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Đang đăng...';
+    submitBtn.innerHTML = '<div class="discussions-loading-spinner"></div> Đang đăng...';
     submitBtn.disabled = true;
     
-    const apiUrl = '/api/discussions/create';
-    
-    fetch(apiUrl, {
+    fetch('/api/discussions/create', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -717,25 +970,26 @@ function submitNewPost(data) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json().then(err => {
+                throw new Error(err.message || 'Có lỗi xảy ra');
+            });
         }
         return response.json();
     })
     .then(result => {
         if (result.success) {
-            showNotification('Bài viết đã được đăng thành công!', 'success');
+            showNotification('Đã đăng bài viết thành công!', 'success');
             closeCreatePostModal();
             
             setTimeout(() => {
-                window.location.reload();
+                window.location.href = '/discussions';
             }, 1000);
         } else {
-            showNotification(result.message || 'Có lỗi xảy ra khi đăng bài!', 'error');
+            throw new Error(result.message || 'Có lỗi xảy ra');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showNotification('Có lỗi xảy ra khi đăng bài!', 'error');
+        showNotification(error.message || 'Có lỗi xảy ra khi đăng bài', 'error');
     })
     .finally(() => {
         submitBtn.innerHTML = originalText;
@@ -743,39 +997,237 @@ function submitNewPost(data) {
     });
 }
 
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `popup-notification ${type}`;
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.discussionsManager) {
+        if (typeof window.discussionsManager.destroy === 'function') {
+            window.discussionsManager.destroy();
+        }
+        window.discussionsManager = null;
+    }
     
-    const iconMap = {
-        success: 'bx-check-circle',
-        error: 'bx-error-circle',
-        warning: 'bx-error',
-        info: 'bx-info-circle'
-    };
+    window.discussionsManager = new DiscussionsManager();
     
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="bx ${iconMap[type]} notification-icon"></i>
-            <span class="notification-message">${message}</span>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
-        </div>
-    `;
+    if (!window.likeManager) {
+        window.likeManager = new LikeManager();
+    }
     
-    document.body.appendChild(notification);
+    document.addEventListener('click', function(event) {
+        const discussionCard = event.target.closest('.discussion-card[data-id]');
+        if (discussionCard && !event.target.closest('.discussion-stat, .action-btn, .discussion-menu-btn, .discussion-dropdown')) {
+            const discussionId = discussionCard.getAttribute('data-id');
+            if (discussionId) {
+                window.location.href = `/discussions/${discussionId}`;
+            }
+        }
+    });
     
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
+    const form = document.getElementById('createPostForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = {
+                title: formData.get('title')?.trim(),
+                category: formData.get('category'),
+                content: formData.get('content')?.trim(),
+                tags: formData.get('tags')?.trim()
+            };
+            
+            let isValid = true;
+            
+            const titleInput = document.getElementById('postTitle');
+            if (!data.title) {
+                validateFieldError(titleInput, 'Vui lòng nhập tiêu đề');
+                isValid = false;
+            }
+            
+            const categorySelect = document.getElementById('postCategory');
+            if (!data.category) {
+                validateFieldError(categorySelect, 'Vui lòng chọn danh mục');
+                isValid = false;
+            }
+            
+            const contentInput = document.getElementById('postContent');
+            if (!data.content) {
+                validateFieldError(contentInput, 'Vui lòng nhập nội dung');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                showNotification('Vui lòng điền đầy đủ thông tin bắt buộc!', 'error');
+                return;
+            }
+            
+            submitNewPost(data);
+        });
+    }
     
-    setTimeout(() => {
-        if (notification.parentElement) {
+    function validateFieldError(field, message) {
+        const parent = field.closest('.discussions-form-group');
+        if (!parent) return;
+        
+        parent.classList.add('error');
+        
+        const existingError = parent.querySelector('.discussions-error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'discussions-error-message';
+        errorMsg.innerHTML = `<i class='bx bx-error-circle'></i> ${message}`;
+        parent.appendChild(errorMsg);
+    }
+    
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.discussion-options')) {
+            document.querySelectorAll('.discussion-dropdown').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            document.querySelectorAll('.discussion-menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+        
+        const createModal = document.getElementById('createPostModal');
+        if (event.target === createModal) {
+            closeCreatePostModal();
+        }
+        
+        const editModal = document.getElementById('editPostModal');
+        if (event.target === editModal) {
+            closeEditPostModal();
+        }
+    });
+    
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeCreatePostModal();
+            closeEditPostModal();
+        }
+    });
+});
+
+if (typeof showNotification !== 'function') {
+    window.showNotification = function(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `popup-notification ${type}`;
+        
+        const iconMap = {
+            success: 'bx-check-circle',
+            error: 'bx-error-circle',
+            warning: 'bx-error',
+            info: 'bx-info-circle'
+        };
+        
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="bx ${iconMap[type]} notification-icon"></i>
+                <span class="notification-message">${message}</span>
+                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
             notification.classList.remove('show');
             setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.remove();
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
                 }
             }, 300);
+        }, 5000);
+    };
+    
+    setupDiscussionsModal();
+}
+
+function setupDiscussionsModal() {
+    const modal = document.getElementById('createPostModal');
+    const modalContent = modal?.querySelector('.discussions-modal-content');
+    const closeBtn = modal?.querySelector('.discussions-modal-close');
+    const cancelBtn = modal?.querySelector('.discussions-btn-cancel');
+    
+    if (!modal) return;
+    
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeCreatePostModal();
         }
-    }, 5000);
+    });
+    
+    if (modalContent) {
+        modalContent.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeCreatePostModal);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeCreatePostModal);
+    }
+    
+    setupFormValidation();
+}
+
+function setupFormValidation() {
+    const titleInput = document.getElementById('postTitle');
+    const contentInput = document.getElementById('postContent');
+    const categorySelect = document.getElementById('postCategory');
+    
+    function validateField(field, message) {
+        const parent = field.closest('.discussions-form-group');
+        if (!parent) return false;
+        
+        if (!field.value.trim()) {
+            parent.classList.add('error');
+            
+            const existingError = parent.querySelector('.discussions-error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'discussions-error-message';
+            errorMsg.innerHTML = `<i class='bx bx-error-circle'></i> ${message}`;
+            parent.appendChild(errorMsg);
+            
+            return false;
+        } else {
+            parent.classList.remove('error');
+            const existingError = parent.querySelector('.discussions-error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            return true;
+        }
+    }
+    
+    if (titleInput) {
+        titleInput.addEventListener('blur', function() {
+            validateField(this, 'Vui lòng nhập tiêu đề');
+        });
+    }
+    
+    if (contentInput) {
+        contentInput.addEventListener('blur', function() {
+            validateField(this, 'Vui lòng nhập nội dung');
+        });
+    }
+    
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            validateField(this, 'Vui lòng chọn danh mục');
+        });
+    }
 }

@@ -3,6 +3,7 @@ $title = 'Thảo Luận - CodeJudge';
 $description = 'Tham gia thảo luận về các bài toán lập trình và chia sẻ kiến thức';
 
 require_once MODEL_PATH . '/DiscussionModel.php';
+global $DISCUSS_CATEGORIES;
 
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
@@ -29,11 +30,6 @@ $totalDiscussions = $discussionModel->countDiscussions($filter, $search);
 $hasMore = count($discussions) >= $limit;
 
 $userId = $_SESSION['user_id'] ?? null;
-if ($userId) {
-    foreach ($discussions as &$discussion) {
-        $discussion['user_liked'] = $discussionModel->hasUserLiked($userId, $discussion['id']);
-    }
-}
 
 $content = ob_start();
 ?>
@@ -59,32 +55,42 @@ $content = ob_start();
 
     <div class="discussions-filters">
         <button class="filter-btn <?= $filter === 'all' ? 'active' : '' ?>" data-filter="all">Tất Cả</button>
-        <button class="filter-btn <?= $filter === 'pinned' ? 'active' : '' ?>" data-filter="pinned">Ghim</button>
-        <button class="filter-btn <?= $filter === 'solved' ? 'active' : '' ?>" data-filter="solved">Đã Giải</button>
-        <button class="filter-btn <?= $filter === 'unsolved' ? 'active' : '' ?>" data-filter="unsolved">Chưa Giải</button>
-        <button class="filter-btn <?= $filter === 'algorithm' ? 'active' : '' ?>" data-filter="algorithm">Thuật Toán</button>
-        <button class="filter-btn <?= $filter === 'data-structure' ? 'active' : '' ?>" data-filter="data-structure">Cấu Trúc Dữ Liệu</button>
-        <button class="filter-btn <?= $filter === 'math' ? 'active' : '' ?>" data-filter="math">Toán Học</button>
-        <button class="filter-btn <?= $filter === 'beginner' ? 'active' : '' ?>" data-filter="beginner">Người Mới</button>
+        <?php foreach ($DISCUSS_CATEGORIES as $key => $category): 
+            $categoryKey = strtolower($key);
+            $isActive = $filter === $categoryKey;
+        ?>
+            <button class="filter-btn <?= $isActive ? 'active' : '' ?>" data-filter="<?= $categoryKey ?>">
+                <?= htmlspecialchars($category['name']) ?>
+            </button>
+        <?php endforeach; ?>
     </div>
 
     <div class="discussions-list" id="discussionsList">
         <?php if (!empty($discussions)): ?>
-            <?php foreach ($discussions as $discussion): ?>
-                <?php
+            <?php 
+            $renderedIds = [];
+            foreach ($discussions as $discussion): 
+                if (in_array($discussion['id'], $renderedIds)) {
+                    continue;
+                }
+                $renderedIds[] = $discussion['id'];
+                
                 $timeAgo = getTimeAgo($discussion['created_at']);
-                $categoryMap = [
-                    'general' => 'Tổng Quát',
-                    'algorithm' => 'Thuật Toán',
-                    'data-structure' => 'Cấu Trúc Dữ Liệu',
-                    'math' => 'Toán Học',
-                    'beginner' => 'Người Mới',
-                    'contest' => 'Cuộc Thi',
-                    'help' => 'Trợ Giúp'
-                ];
-                ?>
+                
+                $categoryMap = [];
+                foreach ($DISCUSS_CATEGORIES as $key => $category) {
+                    $categoryMap[strtolower($key)] = $category['name'];
+                }
+                $categoryMap['general'] = 'Tổng Quát';
+                $categoryMap['algorithm'] = 'Thuật Toán';
+                $categoryMap['data-structure'] = 'Cấu Trúc Dữ Liệu';
+                $categoryMap['math'] = 'Toán Học';
+                $categoryMap['beginner'] = 'Người Mới';
+                $categoryMap['contest'] = 'Cuộc Thi';
+                $categoryMap['help'] = 'Trợ Giúp';
+            ?>
                 <div class="discussion-card <?= $discussion['is_pinned'] ? 'pinned' : '' ?> <?= $discussion['is_solved'] ? 'solved' : '' ?>" 
-                     data-id="<?= $discussion['id'] ?>" onclick="openDiscussion(<?= $discussion['id'] ?>)">
+                     data-id="<?= $discussion['id'] ?>" data-discussion-url="/discussions/<?= $discussion['id'] ?>">
                     
                     <?php if ($discussion['is_pinned']): ?>
                         <div class="pinned-indicator">
@@ -120,9 +126,11 @@ $content = ob_start();
                                 <i class="bx bx-dots-horizontal-rounded"></i>
                             </button>
                             <div class="discussion-dropdown" id="discussionMenu<?= $discussion['id'] ?>">
-                                <button class="discussion-dropdown-item" onclick="event.stopPropagation(); bookmarkDiscussion(<?= $discussion['id'] ?>)">
-                                    <i class="bx bx-bookmark"></i>
-                                    <span>Lưu bài viết</span>
+                                <button class="discussion-dropdown-item <?= ($userId && isset($discussion['is_bookmarked']) && $discussion['is_bookmarked']) ? 'bookmarked' : '' ?>" 
+                                        data-discussion-id="<?= $discussion['id'] ?>"
+                                        onclick="event.stopPropagation(); bookmarkDiscussion(<?= $discussion['id'] ?>)">
+                                    <i class="bx <?= ($userId && isset($discussion['is_bookmarked']) && $discussion['is_bookmarked']) ? 'bxs-bookmark' : 'bx-bookmark' ?>"></i>
+                                    <span><?= ($userId && isset($discussion['is_bookmarked']) && $discussion['is_bookmarked']) ? 'Đã lưu' : 'Lưu bài viết' ?></span>
                                 </button>
                                 <?php if ($userId && $discussion['author_id'] == $userId): ?>
                                     <button class="discussion-dropdown-item edit" onclick="event.stopPropagation(); editDiscussion(<?= $discussion['id'] ?>)">
@@ -186,58 +194,121 @@ $content = ob_start();
     <div class="loading-trigger" id="loadingTrigger" style="height: 1px;"></div>
 </div>
 
-<div id="createPostModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="bx bx-plus-circle"></i> Tạo Bài Thảo Luận Mới</h2>
-            <button type="button" class="modal-close" onclick="closeCreatePostModal()">&times;</button>
+<div id="createPostModal" class="discussions-modal">
+    <div class="discussions-modal-content">
+        <div class="discussions-modal-header">
+            <h2>Tạo Bài Thảo Luận Mới</h2>
+            <button type="button" class="discussions-modal-close" onclick="closeCreatePostModal()">
+                <i class="bx bx-x"></i>
+            </button>
         </div>
-        <form id="createPostForm" class="create-post-form">
-            <div class="form-section full-width">
-                <div class="form-group">
-                    <label for="postTitle">Tiêu đề bài viết *</label>
-                    <input type="text" id="postTitle" name="title" required placeholder="Nhập tiêu đề bài viết của bạn...">
-                </div>
+        
+        <form id="createPostForm" class="discussions-form">
+            <div class="discussions-form-group full-width">
+                <label for="postTitle">Tiêu đề bài viết *</label>
+                <input type="text" id="postTitle" name="title" required placeholder="Nhập tiêu đề bài viết của bạn...">
+                <span class="discussions-form-note">Tiêu đề nên ngắn gọn và mô tả được nội dung bạn muốn thảo luận</span>
             </div>
             
-            <div class="form-section full-width">
-                <div class="form-group">
-                    <label for="postCategory">Danh mục *</label>
-                    <select id="postCategory" name="category" required>
-                        <option value="">Chọn danh mục</option>
-                        <option value="general">Tổng Quát</option>
-                        <option value="algorithm">Thuật Toán</option>
-                        <option value="data-structure">Cấu Trúc Dữ Liệu</option>
-                        <option value="math">Toán Học</option>
-                        <option value="beginner">Người Mới</option>
-                        <option value="contest">Cuộc Thi</option>
-                        <option value="help">Trợ Giúp</option>
-                    </select>
-                </div>
+            <div class="discussions-form-group full-width">
+                <label for="postCategory">Danh mục *</label>
+                <select id="postCategory" name="category" required>
+                    <option value="">Chọn danh mục</option>
+                    <?php foreach ($DISCUSS_CATEGORIES as $key => $category): ?>
+                        <option value="<?= strtolower($key) ?>"><?= htmlspecialchars($category['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             
-            <div class="form-section full-width">
-                <div class="form-group">
-                    <label for="postContent">Nội dung *</label>
-                    <textarea id="postContent" name="content" required placeholder="Viết nội dung bài thảo luận của bạn..." rows="8"></textarea>
-                </div>
+            <div class="discussions-form-group full-width">
+                <label for="postContent">Nội dung *</label>
+                <textarea id="postContent" name="content" required placeholder="Viết nội dung bài thảo luận của bạn..." rows="8"></textarea>
+                <span class="discussions-form-note">Mô tả chi tiết vấn đề, bao gồm mã nguồn nếu cần thiết</span>
             </div>
             
-            <div class="form-section full-width">
-                <div class="form-group">
-                    <label for="postTags">Tags (tùy chọn)</label>
-                    <input type="text" id="postTags" name="tags" placeholder="Nhập các tag, phân cách bằng dấu phẩy (ví dụ: javascript, algorithm, sorting)">
-                    <small class="form-note">Phân tách các tag bằng dấu phẩy. Tối đa 5 tags.</small>
-                </div>
+            <div class="discussions-form-group full-width">
+                <label for="postTags">Thẻ (tùy chọn)</label>
+                <input type="text" id="postTags" name="tags" placeholder="Nhập các tag, phân cách bằng dấu phẩy (ví dụ: javascript, algorithm, sorting)">
+                <span class="discussions-form-note">Phân tách các tag bằng dấu phẩy. Tối đa 5 tags.</span>
             </div>
             
-            <div class="form-actions">
-                <button type="button" class="btn-secondary" onclick="closeCreatePostModal()">Hủy</button>
-                <button type="submit" class="btn-primary">
+            <div class="discussions-form-actions">
+                <button type="button" class="discussions-btn-cancel" onclick="closeCreatePostModal()">Hủy</button>
+                <button type="submit" class="discussions-btn-submit">
                     <i class="bx bx-send"></i> Đăng Bài
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="editPostModal" class="discussions-modal">
+    <div class="discussions-modal-content">
+        <div class="discussions-modal-header">
+            <h2><i class="bx bx-edit"></i> Chỉnh Sửa Bài Thảo Luận</h2>
+            <button type="button" class="discussions-modal-close" onclick="closeEditPostModal()">
+                <i class="bx bx-x"></i>
+            </button>
+        </div>
+        
+        <form id="editPostForm" class="discussions-form">
+            <input type="hidden" id="editPostId" name="post_id" value="">
+            
+            <div class="discussions-form-group full-width">
+                <label for="editPostTitle">Tiêu đề bài viết *</label>
+                <input type="text" id="editPostTitle" name="title" required placeholder="Nhập tiêu đề bài viết của bạn...">
+                <span class="discussions-form-note">Tiêu đề nên ngắn gọn và mô tả được nội dung bạn muốn thảo luận</span>
+            </div>
+            
+            <div class="discussions-form-group full-width">
+                <label for="editPostCategory">Danh mục *</label>
+                <select id="editPostCategory" name="category" required>
+                    <option value="">Chọn danh mục</option>
+                    <?php foreach ($DISCUSS_CATEGORIES as $key => $category): ?>
+                        <option value="<?= strtolower($key) ?>"><?= htmlspecialchars($category['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div class="discussions-form-group full-width">
+                <label for="editPostContent">Nội dung *</label>
+                <textarea id="editPostContent" name="content" required placeholder="Viết nội dung bài thảo luận của bạn..." rows="8"></textarea>
+                <span class="discussions-form-note">Mô tả chi tiết vấn đề, bao gồm mã nguồn nếu cần thiết</span>
+            </div>
+            
+            <div class="discussions-form-group full-width">
+                <label for="editPostTags">Thẻ (tùy chọn)</label>
+                <input type="text" id="editPostTags" name="tags" placeholder="Nhập các tag, phân cách bằng dấu phẩy (ví dụ: javascript, algorithm, sorting)">
+                <span class="discussions-form-note">Phân tách các tag bằng dấu phẩy. Tối đa 5 tags.</span>
+            </div>
+            
+            <div class="discussions-form-actions">
+                <button type="button" class="discussions-btn-cancel" onclick="closeEditPostModal()">Hủy</button>
+                <button type="submit" class="discussions-btn-submit">
+                    <i class="bx bx-save"></i> Cập Nhật
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteConfirmModal" class="modal-confirm-delete">
+    <div class="modal">
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn xóa bài viết này không?</p>
+            <div class="warning-text">
+                <i class="bx bx-error"></i>
+                <span>Hành động này không thể hoàn tác!</span>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="cancelDelete" class="confirm-delete-cancel-btn">
+                Hủy bỏ
+            </button>
+            <button id="confirmDelete" class="confirm-delete-accept-btn">
+                Xóa bài viết
+            </button>
+        </div>
     </div>
 </div>
 

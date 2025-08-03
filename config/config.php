@@ -821,8 +821,56 @@ $RANKING = [
         "min_rating" => 4800,
         "max_rating" => 999999,
         "icon" => "rank_Radiant.png",
-        "color" => "#fff345",
+        "color" => "#b3a700ff",
         "order" => 25
+    ]
+];
+
+$DISCUSS_CATEGORIES = [
+    "General" => [
+        "name" => "Chung",
+        "description" => "Các chủ đề chung về lập trình và CodeJudge.",
+        "icon" => "bx-chat"
+    ],
+    "Problems" => [
+        "name" => "Bài Toán",
+        "description" => "Thảo luận về các bài toán trên CodeJudge.",
+        "icon" => "bx-code-alt"
+    ],
+    "Competitions" => [
+        "name" => "Cuộc Thi",
+        "description" => "Thông tin và thảo luận về các cuộc thi lập trình.",
+        "icon" => "bx-trophy"
+    ],
+    "Learning_Resources" => [
+        "name" => "Tài Nguyên Học Tập",
+        "description" => "Chia sẻ tài nguyên học tập và khóa học lập trình.",
+        "icon" => "bx-book"
+    ],
+    "Feedback_and_Suggestions" => [
+        "name" => "Phản Hồi và Gợi Ý",
+        "description" => "Góp ý và đề xuất cải tiến cho CodeJudge.",
+        "icon" => "bx-message-square-edit"
+    ],
+    "Questions_and_Answers" => [
+        "name" => "Câu Hỏi và Trả Lời",
+        "description" => "Hỏi đáp về lập trình và CodeJudge.",
+        "icon" => "bx-help-circle"
+    ],
+    "Events" => [
+        "name" => "Sự Kiện",
+        "description" => "Thông tin về các sự kiện lập trình sắp tới.",
+        "icon" => "bx-calendar"
+    ],
+    "Questions" => [
+        "name" => "Thắc Mắc",
+        "description" => "Các câu hỏi thường gặp và thắc mắc về CodeJudge.",
+        "icon" => "bx-category"
+    ],
+    "Other" => [
+        "name" => "Khác",
+        "description" => "Các chủ đề khác không thuộc các danh mục trên.",
+        "icon" => "bx-category"
     ]
 ];
 

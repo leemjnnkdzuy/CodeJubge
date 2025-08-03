@@ -46,15 +46,15 @@
 }
 
 .form-actions .login-btn {
-	color: var(--primary-blue, #20beff);
-	border-color: var(--primary-blue, #20beff);
+	border: 2px solid var(--border-color);
+	color: var(--border-color);
 	background: transparent;
 }
 
 .form-actions .login-btn:hover {
-	background: var(--primary-blue, #20beff);
-	color: white;
-	box-shadow: 0 8px 25px rgba(32, 190, 255, 0.3);
+	background: var(--light-gray);
+	color: var(--text-primary);
+	border-color: var(--medium-gray);
 }
 
 .form-actions .signup-btn {

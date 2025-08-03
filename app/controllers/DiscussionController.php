@@ -9,6 +9,7 @@ class DiscussionController extends Controller
     
     public function __construct()
     {
+        global $DISCUSS_CATEGORIES;
         $this->discussionModel = new DiscussionModel();
     }
 
@@ -49,7 +50,8 @@ class DiscussionController extends Controller
                     'replies_count' => (int)$discussion['replies_count'],
                     'created_at' => $discussion['created_at'],
                     'author_id' => (int)$discussion['author_id'],
-                    'user_liked' => false,
+                    'user_liked' => isset($discussion['user_liked']) ? (bool)$discussion['user_liked'] : false,
+                    'is_bookmarked' => isset($discussion['is_bookmarked']) ? (bool)$discussion['is_bookmarked'] : false,
                     'author' => [
                         'username' => $discussion['username'],
                         'first_name' => $discussion['first_name'],
@@ -69,16 +71,15 @@ class DiscussionController extends Controller
             
             $response = [
                 'success' => true,
-                'data' => [
-                    'discussions' => $formattedDiscussions,
-                    'pagination' => [
-                        'current_page' => $page,
-                        'per_page' => $limit,
-                        'total' => $totalDiscussions,
-                        'total_pages' => ceil($totalDiscussions / $limit),
-                        'has_more' => count($discussions) >= $limit
-                    ]
-                ]
+                'discussions' => $formattedDiscussions,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $limit,
+                    'total' => $totalDiscussions,
+                    'total_pages' => ceil($totalDiscussions / $limit),
+                    'has_more' => count($discussions) >= $limit
+                ],
+                'has_more' => count($discussions) >= $limit
             ];
             
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -286,8 +287,12 @@ class DiscussionController extends Controller
                 throw new Exception('Nội dung phải có ít nhất 20 ký tự');
             }
             
-            $allowedCategories = ['general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help'];
-            if (!in_array($category, $allowedCategories)) {
+            // Validate category exists in config
+            global $DISCUSS_CATEGORIES;
+            $validCategories = array_map('strtolower', array_keys($DISCUSS_CATEGORIES));
+            $validCategories = array_merge($validCategories, ['general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help']);
+            
+            if (!in_array($category, $validCategories)) {
                 $category = 'general';
             }
             
@@ -471,6 +476,170 @@ class DiscussionController extends Controller
                 'success' => true,
                 'discussion_id' => $discussionId,
                 'redirect_url' => "/discussions/{$discussionId}"
+            ], JSON_UNESCAPED_UNICODE);
+            
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    public function handleDiscussionById($id)
+    {
+        switch ($_SERVER['REQUEST_METHOD']) {
+            case 'GET':
+                if (strpos($_SERVER['REQUEST_URI'], '/edit') !== false) {
+                    $this->getForEdit($id);
+                } else {
+                    $this->show($id);
+                }
+                break;
+                
+            case 'PUT':
+                $this->update($id);
+                break;
+                
+            case 'DELETE':
+                $this->delete($id);
+                break;
+                
+            default:
+                header('Content-Type: application/json');
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+                break;
+        }
+    }
+
+    public function getForEdit($id)
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            return;
+        }
+        
+        try {
+            $discussion = $this->discussionModel->getDiscussionById($id);
+            
+            if (!$discussion) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Discussion not found']);
+                return;
+            }
+            
+            // Check if user can edit this discussion
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId || $discussion['author_id'] != $userId) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Unauthorized']);
+                return;
+            }
+            
+            echo json_encode([
+                'id' => (int)$discussion['id'],
+                'title' => $discussion['title'],
+                'content' => $discussion['content'],
+                'category' => $discussion['category'],
+                'tags' => $discussion['tags'] ?: []
+            ], JSON_UNESCAPED_UNICODE);
+            
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function update($id)
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            return;
+        }
+        
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                http_response_code(401);
+                echo json_encode(['error' => 'Unauthorized']);
+                return;
+            }
+            
+            // Get current discussion to check ownership
+            $currentDiscussion = $this->discussionModel->getDiscussionById($id);
+            if (!$currentDiscussion || $currentDiscussion['author_id'] != $userId) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden']);
+                return;
+            }
+            
+            // Get JSON data
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            $title = trim($input['title'] ?? '');
+            $content = trim($input['content'] ?? '');
+            $category = $input['category'] ?? '';
+            $tags = $input['tags'] ?? [];
+            
+            // Validation
+            if (empty($title)) {
+                throw new Exception('Tiêu đề không được để trống');
+            }
+            
+            if (empty($content)) {
+                throw new Exception('Nội dung không được để trống');
+            }
+            
+            if (empty($category)) {
+                throw new Exception('Danh mục không được để trống');
+            }
+            
+            // Validate category exists in config
+            global $DISCUSS_CATEGORIES;
+            $validCategories = array_map('strtolower', array_keys($DISCUSS_CATEGORIES));
+            $validCategories = array_merge($validCategories, ['general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help']);
+            
+            if (!in_array($category, $validCategories)) {
+                throw new Exception('Danh mục không hợp lệ');
+            }
+            
+            if (strlen($title) > 200) {
+                throw new Exception('Tiêu đề không được vượt quá 200 ký tự');
+            }
+            
+            if (strlen($content) > 10000) {
+                throw new Exception('Nội dung không được vượt quá 10,000 ký tự');
+            }
+            
+            if (count($tags) > 5) {
+                throw new Exception('Không được có quá 5 tags');
+            }
+            
+            // Update discussion
+            $updateData = [
+                'title' => $title,
+                'content' => $content,
+                'category' => $category,
+                'tags' => $tags
+            ];
+            
+            $result = $this->discussionModel->updateDiscussion($id, $updateData);
+            
+            if (!$result) {
+                throw new Exception('Có lỗi xảy ra khi cập nhật bài viết');
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cập nhật bài viết thành công'
             ], JSON_UNESCAPED_UNICODE);
             
         } catch (Exception $e) {
