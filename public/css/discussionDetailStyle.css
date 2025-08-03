@@ -36,15 +36,14 @@
 		Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-/* Back Button */
 .back-button {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	padding: var(--spacing-sm) var(--spacing-md);
+	padding: 0.5rem 2rem;
 	background: var(--white);
 	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
+	border-radius: 32px;
 	color: var(--text-secondary);
 	text-decoration: none;
 	font-size: 0.875rem;

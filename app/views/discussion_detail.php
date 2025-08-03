@@ -137,9 +137,8 @@ $content = ob_start();
     <div class="replies-section">
         <div class="replies-header">
             <h2>Phản hồi (<?= count($replies) ?>)</h2>
-            <?php if ($userId): ?>
+            <?php if ($userId && !empty($replies)): ?>
                 <button class="reply-btn" onclick="toggleReplyForm()">
-                    <i class='bx bx-message-dots'></i>
                     Trả lời
                 </button>
             <?php endif; ?>
@@ -188,14 +187,6 @@ $content = ob_start();
                                     <i class='bx <?= $reply['user_liked'] ? 'bxs-heart' : 'bx-heart' ?>'></i>
                                     <span class="reply-likes-count"><?= $reply['likes_count'] ?></span>
                                 </div>
-                            </div>
-
-                            <div class="reply-action-buttons">
-                                <?php if ($userId == $discussion['author_id'] && !$reply['is_solution']): ?>
-                                    <button class="reply-action-btn mark-solution mark-solution-btn" data-reply-id="<?= $reply['id'] ?>">
-                                        <i class='bx bx-check-circle'></i>
-                                    </button>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
