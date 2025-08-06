@@ -60,9 +60,14 @@ $routes = [
     
     // Admin routes
     'admin' => 'AdminController@index',
+    'admin/login' => 'AdminController@login',
     'admin/problems' => 'AdminController@problems',
     'admin/users' => 'AdminController@users',
+    'admin/users/create' => 'AdminController@createUser',
+    'admin/users/update/(\d+)' => 'AdminController@updateUser',
+    'admin/users/delete/(\d+)' => 'AdminController@deleteUser',
     'admin/submissions' => 'AdminController@submissions',
+    'admin/contests' => 'AdminController@contests',
     
     // API routes
     'api/run-code' => 'ApiController@runCode',

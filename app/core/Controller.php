@@ -14,6 +14,18 @@ class Controller
         }
     }
     
+    protected function renderPage($viewName, $title = '', $description = '', $data = [])
+    {
+        if ($title) {
+            $data['title'] = $title;
+        }
+        if ($description) {
+            $data['description'] = $description;
+        }
+        
+        $this->view($viewName, $data);
+    }
+    
     protected function layout($layoutName, $content, $data = [])
     {
         $data['content'] = $content;
@@ -23,6 +35,20 @@ class Controller
     protected function redirect($url)
     {
         App::redirect($url);
+    }
+    
+    protected function redirectWithMessage($url, $message, $type = 'success')
+    {
+        if (class_exists('NotificationHelper')) {
+            if ($type === 'success') {
+                NotificationHelper::success($message);
+            } elseif ($type === 'error') {
+                NotificationHelper::error($message);
+            }
+        }
+        
+        header('Location: ' . $url);
+        exit;
     }
     
     protected function json($data, $statusCode = 200)
@@ -37,6 +63,29 @@ class Controller
         }
         
         return isset($_REQUEST[$key]) ? $_REQUEST[$key] : $default;
+    }
+    
+    protected function getPostData($keys = [])
+    {
+        $data = [];
+        if (empty($keys)) {
+            return $_POST;
+        }
+        
+        foreach ($keys as $key => $default) {
+            if (is_numeric($key)) {
+                $data[$default] = $_POST[$default] ?? '';
+            } else {
+                $data[$key] = $_POST[$key] ?? $default;
+            }
+        }
+        
+        return $data;
+    }
+    
+    protected function isPostRequest()
+    {
+        return $_SERVER['REQUEST_METHOD'] === 'POST';
     }
     
     protected function validateInput($rules, $data)
@@ -92,6 +141,35 @@ class Controller
         }
         
         return null;
+    }
+    
+    protected function redirectIfLoggedIn($redirectUrl = '/home')
+    {
+        if (isset($_SESSION['user_id'])) {
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
+        return false;
+    }
+    
+    protected function logout($redirectUrl = '/welcome', $successMessage = 'Đăng xuất thành công')
+    {
+        session_unset();
+        session_destroy();
+        
+        if (isset($_COOKIE['remember_token'])) {
+            setcookie('remember_token', '', time() - 3600, '/');
+        }
+        
+        session_start();
+        
+        // Set success message if NotificationHelper is available
+        if (class_exists('NotificationHelper')) {
+            NotificationHelper::success($successMessage);
+        }
+        
+        header('Location: ' . $redirectUrl);
+        exit;
     }
 }
 ?>

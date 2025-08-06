@@ -33,7 +33,7 @@ if ($notification): ?>
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 9999;
+    z-index: 10000;
     max-width: 400px;
     min-width: 300px;
     opacity: 0;

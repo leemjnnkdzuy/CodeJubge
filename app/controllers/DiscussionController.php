@@ -287,7 +287,6 @@ class DiscussionController extends Controller
                 throw new Exception('Nội dung phải có ít nhất 20 ký tự');
             }
             
-            // Validate category exists in config
             global $DISCUSS_CATEGORIES;
             $validCategories = array_map('strtolower', array_keys($DISCUSS_CATEGORIES));
             $validCategories = array_merge($validCategories, ['general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help']);
@@ -338,9 +337,6 @@ class DiscussionController extends Controller
         }
     }
     
-    /**
-     * Edit discussion page
-     */
     public function edit($id)
     {
         if (!isset($_SESSION['user_id'])) {
@@ -356,20 +352,15 @@ class DiscussionController extends Controller
             return;
         }
         
-        // Check if user is the author
         if ($discussion['author_id'] != $_SESSION['user_id']) {
             header('HTTP/1.0 403 Forbidden');
             echo "Bạn không có quyền chỉnh sửa bài viết này";
             return;
         }
         
-        // You can create an edit view later
         header("Location: /discussions/{$id}");
     }
     
-    /**
-     * Delete discussion
-     */
     public function delete($id)
     {
         header('Content-Type: application/json');
@@ -393,7 +384,6 @@ class DiscussionController extends Controller
                 throw new Exception('Bài viết không tồn tại');
             }
             
-            // Check if user is the author
             if ($discussion['author_id'] != $_SESSION['user_id']) {
                 throw new Exception('Bạn không có quyền xóa bài viết này');
             }
@@ -533,7 +523,6 @@ class DiscussionController extends Controller
                 return;
             }
             
-            // Check if user can edit this discussion
             $userId = $_SESSION['user_id'] ?? null;
             if (!$userId || $discussion['author_id'] != $userId) {
                 http_response_code(403);
@@ -573,7 +562,6 @@ class DiscussionController extends Controller
                 return;
             }
             
-            // Get current discussion to check ownership
             $currentDiscussion = $this->discussionModel->getDiscussionById($id);
             if (!$currentDiscussion || $currentDiscussion['author_id'] != $userId) {
                 http_response_code(403);
@@ -581,7 +569,6 @@ class DiscussionController extends Controller
                 return;
             }
             
-            // Get JSON data
             $input = json_decode(file_get_contents('php://input'), true);
             
             $title = trim($input['title'] ?? '');
@@ -589,7 +576,6 @@ class DiscussionController extends Controller
             $category = $input['category'] ?? '';
             $tags = $input['tags'] ?? [];
             
-            // Validation
             if (empty($title)) {
                 throw new Exception('Tiêu đề không được để trống');
             }
@@ -602,7 +588,6 @@ class DiscussionController extends Controller
                 throw new Exception('Danh mục không được để trống');
             }
             
-            // Validate category exists in config
             global $DISCUSS_CATEGORIES;
             $validCategories = array_map('strtolower', array_keys($DISCUSS_CATEGORIES));
             $validCategories = array_merge($validCategories, ['general', 'algorithm', 'data-structure', 'math', 'beginner', 'contest', 'help']);
@@ -623,7 +608,6 @@ class DiscussionController extends Controller
                 throw new Exception('Không được có quá 5 tags');
             }
             
-            // Update discussion
             $updateData = [
                 'title' => $title,
                 'content' => $content,
@@ -699,7 +683,6 @@ class DiscussionController extends Controller
                 throw new Exception('Nội dung phản hồi không được để trống');
             }
             
-            // Check if discussion exists
             $discussion = $this->discussionModel->getDiscussionById($discussionId);
             if (!$discussion) {
                 throw new Exception('Thảo luận không tồn tại');

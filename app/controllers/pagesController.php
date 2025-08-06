@@ -5,15 +5,6 @@ require_once APP_PATH . '/helpers/NotificationHelper.php';
 
 class pagesController extends Controller
 {
-    private function redirectIfLoggedIn()
-    {
-        if (isset($_SESSION['user_id'])) {
-            header('Location: /home');
-            exit;
-        }
-        return false;
-    }
-    
     public function welcome()
     {
         
@@ -29,26 +20,23 @@ class pagesController extends Controller
     {
         $this->redirectIfLoggedIn();
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+        if ($this->isPostRequest()) {
+            $postData = $this->getPostData(['email', 'password']);
             $remember = isset($_POST['remember']);
             
-            if ($email && $password) {
+            if ($postData['email'] && $postData['password']) {
                 $userModel = new UserModel();
-                $result = $userModel->loginUser($email, $password);
+                $result = $userModel->loginUser($postData['email'], $postData['password']);
                 
                 if ($result['success']) {
                     $_SESSION['user_id'] = $result['user']['id'];
                     $_SESSION['user'] = $result['user'];
-                    NotificationHelper::success('Đăng nhập thành công! Chào mừng bạn trở lại!');
                     
                     if ($remember) {
                         setcookie('remember_token', $result['user']['id'], time() + (30 * 24 * 60 * 60), '/');
                     }
                     
-                    header('Location: /home');
-                    exit;
+                    $this->redirectWithMessage('/home', 'Đăng nhập thành công! Chào mừng bạn trở lại!');
                 } else {
                     NotificationHelper::error($result['message']);
                 }
@@ -57,66 +45,56 @@ class pagesController extends Controller
             }
         }
         
-        $title = 'Đăng nhập - CodeJudge';
-        $description = 'Đăng nhập vào tài khoản CodeJudge của bạn';
-        
-        include VIEW_PATH . '/login.php';
+        $this->renderPage('login', 'Đăng nhập - CodeJudge', 'Đăng nhập vào tài khoản CodeJudge của bạn');
     }
     
     public function register()
     {
         $this->redirectIfLoggedIn();
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $firstName = $_POST['firstName'] ?? '';
-            $lastName = $_POST['lastName'] ?? '';
-            $username = $_POST['username'] ?? '';
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $confirmPassword = $_POST['confirmPassword'] ?? '';
+        if ($this->isPostRequest()) {
+            $postData = $this->getPostData([
+                'firstName', 'lastName', 'username', 'email', 'password', 'confirmPassword'
+            ]);
             $terms = isset($_POST['terms']);
             $newsletter = isset($_POST['newsletter']);
             
             if (!$terms) {
                 NotificationHelper::error('Bạn phải đồng ý với điều khoản dịch vụ');
             } 
-            elseif ($password !== $confirmPassword) {
+            elseif ($postData['password'] !== $postData['confirmPassword']) {
                 NotificationHelper::error('Mật khẩu xác nhận không khớp');
             } 
             else {
                 $userData = [
-                    'firstName' => $firstName,
-                    'lastName' => $lastName,
-                    'username' => $username,
-                    'email' => $email,
-                    'password' => $password
+                    'firstName' => $postData['firstName'],
+                    'lastName' => $postData['lastName'],
+                    'username' => $postData['username'],
+                    'email' => $postData['email'],
+                    'password' => $postData['password']
                 ];
                 
                 $userModel = new UserModel();
                 $result = $userModel->createUser($userData);
                 
                 if ($result['success']) {
-                    NotificationHelper::success($result['message'] . ' Bạn có thể đăng nhập ngay bây giờ.');
-                    header('Location: ' . SITE_URL . '/login');
-                    exit;
+                    $this->redirectWithMessage(SITE_URL . '/login', 
+                        $result['message'] . ' Bạn có thể đăng nhập ngay bây giờ.');
                 } else {
                     NotificationHelper::error($result['message']);
                 }
             }
         }
         
-        $title = 'Đăng ký - CodeJudge';
-        $description = 'Tạo tài khoản CodeJudge của bạn';
-        
-        include VIEW_PATH . '/signup.php';
+        $this->renderPage('signup', 'Đăng ký - CodeJudge', 'Tạo tài khoản CodeJudge của bạn');
     }
     
     public function forgotPassword()
     {
         $this->redirectIfLoggedIn();
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
+        if ($this->isPostRequest()) {
+            $email = $this->getInput('email');
             
             if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $userModel = new UserModel();
@@ -132,26 +110,12 @@ class pagesController extends Controller
             }
         }
         
-        $title = 'Quên mật khẩu - CodeJudge';
-        $description = 'Khôi phục mật khẩu tài khoản CodeJudge';
-        
-        include VIEW_PATH . '/fogotPassword.php';
+        $this->renderPage('fogotPassword', 'Quên mật khẩu - CodeJudge', 'Khôi phục mật khẩu tài khoản CodeJudge');
     }
     
-    public function logout()
+    public function logout($redirectUrl = '/welcome', $successMessage = 'Đăng xuất thành công')
     {
-        session_unset();
-        session_destroy();
-        
-        if (isset($_COOKIE['remember_token'])) {
-            setcookie('remember_token', '', time() - 3600, '/');
-        }
-        
-        session_start();
-        NotificationHelper::success('Đăng xuất thành công');
-        
-        header('Location: /welcome');
-        exit;
+        parent::logout($redirectUrl, $successMessage);
     }
     
     public function problems()
@@ -222,7 +186,11 @@ class pagesController extends Controller
         $title = $problem['title'] . ' - CodeJudge';
         $description = substr(strip_tags($problem['description']), 0, 150) . '...';
         
-        include VIEW_PATH . '/problem_detail.php';
+        $this->renderPage('problem_detail', $title, $description, [
+            'problem' => $problem,
+            'userSubmissions' => $userSubmissions,
+            'exampleSubmissions' => $exampleSubmissions
+        ]);
     }
     
     public function show404()
@@ -232,8 +200,7 @@ class pagesController extends Controller
         }
         
         http_response_code(404);
-        $title = '404 - Không Tìm Thấy Trang';
-        include VIEW_PATH . '/404.php';
+        $this->renderPage('404', '404 - Không Tìm Thấy Trang');
     }
     
     public function privacy()

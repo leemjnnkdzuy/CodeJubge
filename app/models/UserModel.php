@@ -646,6 +646,78 @@ class UserModel
             return [];
         }
     }
+    
+    public function getUserByUsername($username)
+    {
+        try {
+            $query = "SELECT * FROM {$this->table} WHERE username = :username";
+            $user = $this->db->selectOne($query, ['username' => $username]);
+            
+            if ($user) {
+                return $this->sanitizeUserData($user);
+            }
+            
+            return null;
+            
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+    
+    public function deleteUser($userId)
+    {
+        try {
+            // First check if user exists
+            $user = $this->getUserById($userId);
+            if (!$user) {
+                return false;
+            }
+            
+            // Prevent deleting admin users
+            if ($user['role'] === 'admin') {
+                return false;
+            }
+            
+            // Delete user
+            $query = "DELETE FROM {$this->table} WHERE id = :id";
+            return $this->db->delete($query, ['id' => $userId]);
+            
+        } catch (Exception $e) {
+            error_log("Error deleting user: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateUserAdmin($userId, $userData)
+    {
+        try {
+            $allowedFields = ['first_name', 'last_name', 'username', 'email', 'role', 'is_active'];
+            $updateFields = [];
+            $params = ['id' => $userId];
+            
+            foreach ($allowedFields as $field) {
+                if (array_key_exists($field, $userData)) {
+                    $updateFields[] = "{$field} = :{$field}";
+                    $params[$field] = $userData[$field];
+                }
+            }
+            
+            if (empty($updateFields)) {
+                return false;
+            }
+            
+            $updateFields[] = "updated_at = :updated_at";
+            $params['updated_at'] = date('Y-m-d H:i:s');
+            
+            $query = "UPDATE {$this->table} SET " . implode(', ', $updateFields) . " WHERE id = :id";
+            
+            return $this->db->update($query, $params) > 0;
+            
+        } catch (Exception $e) {
+            error_log("Error updating user admin: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 
 ?>

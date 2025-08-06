@@ -1,7 +1,4 @@
 <?php 
-$viewingUser = isset($profileUser) ? $profileUser : $currentUser;
-$isOwnProfile = isset($isOwnProfile) ? $isOwnProfile : true;
-
 if (!$viewingUser) {
     header('Location: /login');
     exit;

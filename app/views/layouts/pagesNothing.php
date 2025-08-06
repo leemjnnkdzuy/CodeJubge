@@ -29,6 +29,8 @@
         echo '<link rel="stylesheet" href="/css/languagesStyle.css">';
     } elseif (strpos($current_uri, '/docs/') !== false) {
         echo '<link rel="stylesheet" href="/css/docsStyle.css">';
+    } elseif (strpos($current_uri, '/admin/login') !== false) {
+        echo '<link rel="stylesheet" href="/css/loginStyle.css">';
     } else {
         echo '<link rel="stylesheet" href="/css/404Style.css">';
     }
