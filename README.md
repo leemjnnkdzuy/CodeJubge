@@ -2,16 +2,6 @@
 
 CodeJudge là một nền tảng web dành cho việc học tập và luyện tập lập trình, cung cấp khả năng chấm code tự động và tạo bài tập lập trình. Dự án được xây dựng bằng PHP thuần với kiến trúc MVC.
 
-## Tính năng chính
-
-- **Hệ thống người dùng**: Đăng ký, đăng nhập, quản lý hồ sơ cá nhân
-- **Bài tập lập trình**: Tạo và giải quyết các bài tập code
-- **Chấm code tự động**: Hỗ trợ nhiều ngôn ngữ lập trình (Python, JavaScript, Java, C/C++)
-- **Bảng xếp hạng**: Theo dõi và xếp hạng người dùng
-- **Hệ thống thảo luận**: Trao đổi và hỗ trợ lẫn nhau
-- **Hệ thống huy hiệu**: Thưởng các huy hiệu dựa trên thành tích
-- **Rating và ranking**: Hệ thống xếp hạng theo kỹ năng
-
 ## Yêu cầu hệ thống
 
 - **Web Server**: XAMPP (Apache + MySQL + PHP)
@@ -51,12 +41,14 @@ CodeJudge là một nền tảng web dành cho việc học tập và luyện t�
    ```
 
 2. **Tạo cơ sở dữ liệu tự động**
-   - Truy cập: `http://localhost:8000/setup_database.php`
-   - Script sẽ tự động:
-     - Xóa database cũ (nếu có)
-     - Tạo database mới `code_judge`
-     - Tạo tất cả bảng cần thiết
-     - Thêm dữ liệu mẫu
+   - Chạy lệnh để khởi động dự án: 
+   ```terminal
+   php -S localhost:8000 -t public
+   ```
+   - Chạy lệnh để setup database: 
+   ```terminal
+   http://localhost:8000/setup_database.php`
+   ```
 
 ### Bước 3: Khởi động ứng dụng
 
