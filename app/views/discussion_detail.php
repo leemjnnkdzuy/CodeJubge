@@ -1,18 +1,8 @@
 <?php
 require_once MODEL_PATH . '/DiscussionModel.php';
+require_once ROOT_PATH . '/config/config.php';
 
 date_default_timezone_set('Asia/Ho_Chi_Minh');
-
-global $DISCUSS_CATEGORIES;
-$DISCUSS_CATEGORIES = [
-    'GENERAL' => ['name' => 'Tổng Quát', 'icon' => 'bx-chat', 'color' => '#6c757d'],
-    'ALGORITHM' => ['name' => 'Thuật Toán', 'icon' => 'bx-code-alt', 'color' => '#20beff'],
-    'DATA_STRUCTURE' => ['name' => 'Cấu Trúc Dữ Liệu', 'icon' => 'bx-data', 'color' => '#03dac6'],
-    'MATH' => ['name' => 'Toán Học', 'icon' => 'bx-calculator', 'color' => '#ff6f00'],
-    'BEGINNER' => ['name' => 'Người Mới', 'icon' => 'bx-help-circle', 'color' => '#6200ea'],
-    'CONTEST' => ['name' => 'Cuộc Thi', 'icon' => 'bx-trophy', 'color' => '#e91e63'],
-    'HELP' => ['name' => 'Trợ Giúp', 'icon' => 'bx-support', 'color' => '#4caf50']
-];
 
 function getTimeAgo($datetime) {
     $time = time() - strtotime($datetime);
@@ -25,20 +15,34 @@ function getTimeAgo($datetime) {
     return date('d/m/Y H:i', strtotime($datetime));
 }
 
-function getCategoryDisplayName($category) {
+function getCategoryInfo($category) {
     global $DISCUSS_CATEGORIES;
     
-    $categoryMap = [
-        'general' => 'Tổng Quát',
-        'algorithm' => 'Thuật Toán', 
-        'data-structure' => 'Cấu Trúc Dữ Liệu',
-        'math' => 'Toán Học',
-        'beginner' => 'Người Mới',
-        'contest' => 'Cuộc Thi',
-        'help' => 'Trợ Giúp'
-    ];
+    $categoryKey = ucfirst(str_replace('-', '_', $category));
     
-    return $categoryMap[$category] ?? ucfirst($category);
+    if (isset($DISCUSS_CATEGORIES[$categoryKey])) {
+        return [
+            'name' => $DISCUSS_CATEGORIES[$categoryKey]['name'],
+            'icon' => $DISCUSS_CATEGORIES[$categoryKey]['icon']
+        ];
+    }
+    
+    if (isset($DISCUSS_CATEGORIES['Other'])) {
+        return [
+            'name' => $DISCUSS_CATEGORIES['Other']['name'],
+            'icon' => $DISCUSS_CATEGORIES['Other']['icon']
+        ];
+    }
+    
+    return [
+        'name' => ucfirst($category),
+        'icon' => 'bx-category'
+    ];
+}
+
+function getCategoryDisplayName($category) {
+    $categoryInfo = getCategoryInfo($category);
+    return $categoryInfo['name'];
 }
 
 function getAvatarUrl($avatar) {
@@ -85,7 +89,13 @@ $content = ob_start();
                 <?php if ($discussion['is_solved']): ?>
                     <span class="badge solved">Đã giải quyết</span>
                 <?php endif; ?>
-                <span class="badge category"><?= getCategoryDisplayName($discussion['category']) ?></span>
+                <?php 
+                $categoryInfo = getCategoryInfo($discussion['category']);
+                ?>
+                <span class="badge category">
+                    <i class='bx <?= $categoryInfo['icon'] ?>'></i>
+                    <?= $categoryInfo['name'] ?>
+                </span>
             </div>
         </div>
 
