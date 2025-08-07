@@ -80,6 +80,8 @@ $routes = [
     'api/run-code' => 'ApiController@runCode',
     'api/submit-solution' => 'ApiController@submitSolution',
     'api/get-problem' => 'ApiController@getProblem',
+    'api/user-rating' => 'ApiController@getUserRating',
+    'api/rating-leaderboard' => 'ApiController@getRatingLeaderboard',
 ];
 
 return $routes;

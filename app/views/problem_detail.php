@@ -34,7 +34,7 @@ ob_start();
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 
-<div class="problem-workspace">
+<div class="problem-workspace" data-problem-id="<?= htmlspecialchars($problem['id'] ?? 0) ?>">
     <div class="problem-sidebar">
         <div class="problem-tabs">
             <div class="problem-tab active" data-tab="description">
@@ -191,34 +191,124 @@ ob_start();
                 <div class="problem-section">
                     <h2 class="section-title">
                         <i class="bx bx-history"></i>
-                        Lịch sử nộp bài của bạn
+                        Lịch sử nộp bài của bạn (<?= count($userSubmissions) ?> submissions)
                     </h2>
                     <div class="submissions-container">
                         <?php foreach ($userSubmissions as $submission): ?>
-                        <div class="submission-item status-<?= strtolower(str_replace(' ', '_', $submission['status'])) ?>">
-                            <div class="submission-status">
-                                <div class="status-icon status-<?= $submission['status'] === 'Accepted' ? 'passed' : 'failed' ?>"></div>
-                                <span><?= ucfirst($submission['status']) ?></span>
+                        <div class="submission-item status-<?= strtolower(str_replace([' ', '_'], ['_', '_'], $submission['status'])) ?>">
+                            <div class="submission-header">
+                                <div class="submission-status">
+                                    <?php 
+                                    $statusClass = $submission['status'] === 'Accepted' ? 'passed' : 'failed';
+                                    $statusIcon = $submission['status'] === 'Accepted' ? 'bx-check-circle' : 'bx-x-circle';
+                                    ?>
+                                    <div class="status-icon status-<?= $statusClass ?>">
+                                        <i class="bx <?= $statusIcon ?>"></i>
+                                    </div>
+                                    <span class="status-text"><?= htmlspecialchars($submission['status']) ?></span>
+                                </div>
+                                <div class="submission-meta">
+                                    <span class="submission-time">
+                                        <i class="bx bx-time"></i> 
+                                        <?= date('d/m/Y H:i:s', strtotime($submission['created_at'])) ?>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="submission-info">
-                                <span class="submission-time"><?= date('d/m/Y H:i', strtotime($submission['created_at'])) ?></span>
-                                <span class="submission-language"><?= $submission['language'] ?></span>
-                                <?php if ($submission['status'] === 'Accepted'): ?>
-                                <span class="submission-stats">
-                                    <i class="bx bx-time"></i> <?= $submission['execution_time'] ?>ms
-                                    <i class="bx bx-memory-card"></i> <?= $submission['memory_usage'] ?>MB
-                                </span>
+                            <div class="submission-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Ngôn ngữ:</span>
+                                    <span class="detail-value language-<?= strtolower($submission['language']) ?>">
+                                        <?= htmlspecialchars($submission['language']) ?>
+                                    </span>
+                                </div>
+                                <?php if (isset($submission['test_cases_passed']) && isset($submission['total_test_cases'])): ?>
+                                <div class="detail-item">
+                                    <span class="detail-label">Test cases:</span>
+                                    <span class="detail-value">
+                                        <?= $submission['test_cases_passed'] ?>/<?= $submission['total_test_cases'] ?>
+                                    </span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if ($submission['status'] === 'Accepted' && ($submission['execution_time'] > 0 || $submission['memory_usage'] > 0)): ?>
+                                <div class="detail-item">
+                                    <span class="detail-label">Thời gian:</span>
+                                    <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Bộ nhớ:</span>
+                                    <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($submission['error_message'])): ?>
+                                <div class="detail-item error-message">
+                                    <span class="detail-label">Lỗi:</span>
+                                    <span class="detail-value"><?= htmlspecialchars($submission['error_message']) ?></span>
+                                </div>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <?php else: ?>
+                <?php endif; ?>
+                
+                <?php if (!empty($exampleSubmissions)): ?>
+                <div class="problem-section">
+                    <h2 class="section-title">
+                        <i class="bx bx-trophy"></i>
+                        Các submission tốt nhất
+                    </h2>
+                    <div class="submissions-container example-submissions">
+                        <?php foreach ($exampleSubmissions as $submission): ?>
+                        <div class="submission-item status-accepted">
+                            <div class="submission-header">
+                                <div class="submission-status">
+                                    <div class="status-icon status-passed">
+                                        <i class="bx bx-check-circle"></i>
+                                    </div>
+                                    <span class="status-text">Accepted</span>
+                                </div>
+                                <div class="submission-meta">
+                                    <span class="submission-user">
+                                        <i class="bx bx-user"></i>
+                                        <?= htmlspecialchars($submission['username']) ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="submission-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Ngôn ngữ:</span>
+                                    <span class="detail-value language-<?= strtolower($submission['language']) ?>">
+                                        <?= htmlspecialchars($submission['language']) ?>
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Thời gian:</span>
+                                    <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Bộ nhớ:</span>
+                                    <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Nộp lúc:</span>
+                                    <span class="detail-value">
+                                        <?= date('d/m/Y H:i', strtotime($submission['created_at'])) ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (empty($userSubmissions) && empty($exampleSubmissions)): ?>
                 <div class="problem-section">
                     <div class="empty-state">
                         <i class="bx bx-code-alt"></i>
-                        <p>Bạn chưa có submission nào cho bài này.</p>
+                        <p>Chưa có submission nào cho bài này.</p>
+                        <p>Hãy thử giải bài để trở thành người đầu tiên!</p>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -229,23 +319,14 @@ ob_start();
     <div class="editor-panel">
         <div class="editor-header">
             <div class="editor-tabs">
-                <div class="editor-tab active" data-tab="code">
-                    <i class="bx bx-code"></i>
-                    Code
-                </div>
-                <div class="editor-tab" data-tab="testcase">
-                    <i class="bx bx-test-tube"></i>
-                    Testcase
-                </div>
-            </div>
-            
-            <div class="editor-controls">
                 <select id="languageSelect" class="language-select">
                     <?php foreach ($SUPPORTED_LANGUAGES as $key => $lang): ?>
                         <option value="<?= $key ?>"><?= $lang['name'] ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
                 
+            <div class="editor-controls">
                 <button class="btn btn-outline" id="runCode">
                     <i class="bx bx-play"></i>
                     Chạy thử
@@ -280,109 +361,63 @@ ob_start();
     </div>
 </div>
 
-<script>
-    const languageTemplates = <?= json_encode(array_map(function($lang) { return $lang['template']; }, $SUPPORTED_LANGUAGES)) ?>;
-    
-    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
-    
-    let editor;
-    
-    require(['vs/editor/editor.main'], function () {
-        editor = monaco.editor.create(document.getElementById('monaco-editor'), {
-            value: languageTemplates.python || "# Viết code của bạn ở đây",
-            language: 'python',
-            theme: 'vs-light',
-            fontSize: 14,
-            lineNumbers: 'on',
-            minimap: { enabled: true },
-            automaticLayout: true,
-            scrollBeyondLastLine: false,
-            wordWrap: 'on'
-        });
-    });
-    
-    document.querySelectorAll('.problem-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            
-            document.querySelectorAll('.problem-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
-        });
-    });
-    
-    document.getElementById('languageSelect').addEventListener('change', function() {
-        const language = this.value;
-        const template = languageTemplates[language] || '';
+<div class="submit-popup-overlay" id="submitPopup">
+    <div class="submit-popup">
+        <div class="submit-popup-header">
+            <h3 class="submit-popup-title">
+                Xác nhận nộp bài
+            </h3>
+            <button class="submit-popup-close" id="closeSubmitPopup">
+                <i class="bx bx-x"></i>
+            </button>
+        </div>
         
-        if (editor) {
-            monaco.editor.setModelLanguage(editor.getModel(), language);
-            editor.setValue(template);
-        }
-    });
-    
-    document.getElementById('runCode').addEventListener('click', function() {
-        const code = editor.getValue();
-        const language = document.getElementById('languageSelect').value;
-        
-        if (!code.trim()) {
-            alert('Vui lòng nhập code trước khi chạy thử!');
-            return;
-        }
-        
-        const consoleOutput = document.getElementById('consoleOutput');
-        consoleOutput.innerHTML = '<div class="console-message"><i class="bx bx-loader bx-spin"></i> Đang chạy code...</div>';
-        
-        setTimeout(() => {
-            consoleOutput.innerHTML = `
-                <div class="test-case">
-                    <div class="test-case-header">
-                        <i class="bx bx-check-circle" style="color: #28a745;"></i>
-                        Test Case 1: Passed
-                    </div>
-                    <div class="test-case-content">
-                        <div class="test-result">Input: ${document.querySelector('.sample-code')?.textContent || 'Sample input'}</div>
-                        <div class="test-result">Expected: ${document.querySelectorAll('.sample-code')[1]?.textContent || 'Sample output'}</div>
-                        <div class="test-result">Actual: ${document.querySelectorAll('.sample-code')[1]?.textContent || 'Sample output'}</div>
-                    </div>
-                </div>
-            `;
-        }, 1500);
-    });
-    
-    document.getElementById('submitCode').addEventListener('click', function() {
-        const code = editor.getValue();
-        const language = document.getElementById('languageSelect').value;
-        
-        if (!code.trim()) {
-            alert('Vui lòng nhập code trước khi nộp bài!');
-            return;
-        }
-        
-        if (confirm('Bạn có chắc chắn muốn nộp bài này?')) {
-            console.log('Submitting code:', { code, language });
-            
-            const consoleOutput = document.getElementById('consoleOutput');
-            consoleOutput.innerHTML = `
-                <div class="console-message" style="background: #d4edda; color: #155724;">
-                    <i class="bx bx-check-circle"></i>
-                    Code đã được nộp thành công! Đang chấm bài...
-                </div>
-            `;
-        }
-    });
-    
-    document.getElementById('clearConsole').addEventListener('click', function() {
-        document.getElementById('consoleOutput').innerHTML = `
-            <div class="console-message">
-                <i class="bx bx-info-circle"></i>
-                Console đã được xóa.
+        <div class="submit-popup-body">
+            <div class="submit-popup-icon">
+                <i class="bx bx-code-alt"></i>
             </div>
-        `;
-    });
+            
+            <p class="submit-popup-message">
+                Bạn có chắc chắn muốn nộp bài giải cho bài tập 
+                <strong><?= htmlspecialchars($problem['title']) ?></strong> không?
+            </p>
+            
+            <div class="submit-popup-info">
+                <div class="submit-info-item">
+                    <i class="bx bx-code"></i>
+                    <span>Ngôn ngữ: <span id="popupLanguage">Python</span></span>
+                </div>
+                <div class="submit-info-item">
+                    <i class="bx bx-file-blank"></i>
+                    <span>Số dòng code: <span id="popupLineCount">0</span></span>
+                </div>
+                <div class="submit-info-item">
+                    <i class="bx bx-info-circle"></i>
+                    <span class="submit-warning">
+                        Lưu ý: Sau khi nộp bài, bạn vẫn có thể nộp lại nhiều lần.
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="submit-popup-footer">
+            <button class="btn btn-outline" id="cancelSubmit">
+                <i class="bx bx-x"></i>
+                Hủy bỏ
+            </button>
+            <button class="btn btn-primary" id="confirmSubmit">
+                <i class="bx bx-send"></i>
+                Xác nhận nộp bài
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.languageTemplatesFromPHP = <?= json_encode(array_map(function($lang) { return $lang['template']; }, $SUPPORTED_LANGUAGES)) ?>;
+    window.problemId = <?= $problem['id'] ?>;
 </script>
+<script src="/js/problemDetail.js"></script>
 
 <?php
 $content = ob_get_clean();

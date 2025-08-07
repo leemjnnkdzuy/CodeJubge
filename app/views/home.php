@@ -164,6 +164,118 @@ $content = ob_start();
             <?php endforeach; ?>
         </div>
     </div>
+    
+    <!-- Submissions Statistics Section -->
+    <?php if (!empty($stats['general'])): ?>
+    <div class="submissions-header">
+        <div class="submissions-header-content">
+            <div class="submissions-header-text">
+                <h1>
+                    <i class='bx bx-history'></i>
+                    Thống kê submissions
+                </h1>
+                <p>Xem lại tất cả submissions và thống kê của bạn</p>
+            </div>
+            <div class="submissions-stats-quick">
+                <div class="stat-quick">
+                    <span class="stat-value"><?= number_format($stats['general']['total_submissions']) ?></span>
+                    <span class="stat-label">Tổng submissions</span>
+                </div>
+                <div class="stat-quick">
+                    <span class="stat-value"><?= number_format($stats['general']['problems_solved']) ?></span>
+                    <span class="stat-label">Bài đã AC</span>
+                </div>
+                <div class="stat-quick">
+                    <span class="stat-value"><?= $stats['general']['accepted_submissions'] > 0 ? round(($stats['general']['accepted_submissions'] / $stats['general']['total_submissions']) * 100, 1) : 0 ?>%</span>
+                    <span class="stat-label">Tỷ lệ AC</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="submissions-statistics">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <h3><i class='bx bx-bar-chart'></i> Thống kê tổng quan</h3>
+                </div>
+                <div class="stat-card-content">
+                    <div class="stat-row">
+                        <span class="stat-name">Tổng submissions:</span>
+                        <span class="stat-val"><?= number_format($stats['general']['total_submissions']) ?></span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Accepted:</span>
+                        <span class="stat-val success"><?= number_format($stats['general']['accepted_submissions']) ?></span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Bài đã giải:</span>
+                        <span class="stat-val"><?= number_format($stats['general']['problems_solved']) ?></span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Bài đã thử:</span>
+                        <span class="stat-val"><?= number_format($stats['general']['problems_attempted']) ?></span>
+                    </div>
+                    <?php if ($stats['general']['avg_runtime']): ?>
+                    <div class="stat-row">
+                        <span class="stat-name">Runtime TB:</span>
+                        <span class="stat-val"><?= round($stats['general']['avg_runtime']) ?>ms</span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($stats['general']['avg_memory']): ?>
+                    <div class="stat-row">
+                        <span class="stat-name">Memory TB:</span>
+                        <span class="stat-val"><?= round($stats['general']['avg_memory'] / 1024, 1) ?>MB</span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Language Stats -->
+            <?php if (!empty($stats['languages'])): ?>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <h3><i class='bx bx-code'></i> Ngôn ngữ lập trình</h3>
+                </div>
+                <div class="stat-card-content">
+                    <?php foreach ($stats['languages'] as $lang): ?>
+                    <div class="lang-stat">
+                        <div class="lang-info">
+                            <span class="lang-name"><?= ucfirst(htmlspecialchars($lang['language'])) ?></span>
+                            <span class="lang-count"><?= $lang['count'] ?> submissions</span>
+                        </div>
+                        <div class="lang-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: <?= ($lang['accepted'] / max($lang['count'], 1)) * 100 ?>%"></div>
+                            </div>
+                            <span class="lang-rate"><?= round(($lang['accepted'] / max($lang['count'], 1)) * 100, 1) ?>%</span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($stats['status'])): ?>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <h3><i class='bx bx-check-circle'></i> Trạng thái submissions</h3>
+                </div>
+                <div class="stat-card-content">
+                    <?php foreach ($stats['status'] as $status): ?>
+                    <div class="status-stat">
+                        <span class="status-badge status-<?= strtolower(str_replace('_', '-', $status['status'])) ?>">
+                            <?= ucfirst(str_replace('_', ' ', $status['status'])) ?>
+                        </span>
+                        <span class="status-count"><?= $status['count'] ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php 

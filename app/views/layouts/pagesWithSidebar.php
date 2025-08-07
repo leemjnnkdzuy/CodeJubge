@@ -25,9 +25,12 @@
         }
     } elseif (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0) {
         echo ' <link rel="stylesheet" href="/css/leaderboardStyle.css">';
+    } elseif (strpos($_SERVER['REQUEST_URI'], '/submissions') === 0) {
+        echo '<link rel="stylesheet" href="/css/submissionsStyle.css">';
     } 
     else {
         echo '<link rel="stylesheet" href="/css/homeStyle.css">';
+        echo '<link rel="stylesheet" href="/css/submissionsStyle.css">';
     }
     
     if (isset($additionalCSS) && is_array($additionalCSS)) {

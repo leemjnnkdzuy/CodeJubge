@@ -206,7 +206,45 @@ class ProblemModel {
     public function getUserSubmissions($userId, $problemId, $limit = 10): array
     {
         try {
-            return [];
+            $sql = "SELECT s.*, u.username
+                    FROM submissions s
+                    JOIN users u ON s.user_id = u.id
+                    WHERE s.user_id = ? AND s.problem_id = ?
+                    ORDER BY s.submitted_at DESC
+                    LIMIT ?";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$userId, $problemId, $limit]);
+            
+            $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($submissions as &$submission) {
+                $submission['created_at'] = $submission['submitted_at'];
+                $submission['execution_time'] = $submission['runtime'] ?? 0;
+                
+                $memoryBytes = $submission['memory_used'] ?? 0;
+                if ($memoryBytes > 0) {
+                    $submission['memory_usage'] = round($memoryBytes / (1024 * 1024), 2);
+                } else {
+                    $submission['memory_usage'] = 0;
+                }
+                
+                $statusMap = [
+                    'accepted' => 'Accepted',
+                    'wrong_answer' => 'Wrong Answer', 
+                    'time_limit' => 'Time Limit Exceeded',
+                    'memory_limit' => 'Memory Limit Exceeded',
+                    'runtime_error' => 'Runtime Error',
+                    'compile_error' => 'Compile Error',
+                    'pending' => 'Pending',
+                    'running' => 'Running'
+                ];
+                
+                $submission['status'] = $statusMap[$submission['status']] ?? ucfirst($submission['status']);
+            }
+            
+            return $submissions;
+            
         } catch (PDOException $e) {
             error_log("Error getting user submissions: " . $e->getMessage());
             return [];
@@ -216,7 +254,34 @@ class ProblemModel {
     public function getExampleSubmissions($problemId, $limit = 5): array
     {
         try {
-            return [];
+            $sql = "SELECT s.*, u.username
+                    FROM submissions s
+                    JOIN users u ON s.user_id = u.id
+                    WHERE s.problem_id = ? AND s.status = 'accepted'
+                    ORDER BY s.runtime ASC, s.memory_used ASC, s.submitted_at DESC
+                    LIMIT ?";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$problemId, $limit]);
+            
+            $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($submissions as &$submission) {
+                $submission['created_at'] = $submission['submitted_at'];
+                $submission['execution_time'] = $submission['runtime'] ?? 0;
+                
+                $memoryBytes = $submission['memory_used'] ?? 0;
+                if ($memoryBytes > 0) {
+                    $submission['memory_usage'] = round($memoryBytes / (1024 * 1024), 2);
+                } else {
+                    $submission['memory_usage'] = 0;
+                }
+                
+                $submission['status'] = 'Accepted';
+            }
+            
+            return $submissions;
+            
         } catch (PDOException $e) {
             error_log("Error getting example submissions: " . $e->getMessage());
             return [];
@@ -236,13 +301,30 @@ class ProblemModel {
             $problem = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($problem) {
-                // Decode JSON fields
                 $problem['examples'] = json_decode($problem['examples'] ?? '[]', true);
                 $problem['problem_types'] = json_decode($problem['problem_types'] ?? '[]', true);
                 $problem['tags'] = json_decode($problem['tags'] ?? '[]', true);
                 $problem['hints'] = json_decode($problem['hints'] ?? '[]', true);
                 
-                // Get test cases
+                $statsSQL = "SELECT 
+                    COUNT(*) as submission_count,
+                    SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_count
+                    FROM submissions 
+                    WHERE problem_id = ?";
+                
+                $statsStmt = $this->pdo->prepare($statsSQL);
+                $statsStmt->execute([$id]);
+                $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+                
+                $problem['submission_count'] = $stats['submission_count'] ?? 0;
+                $problem['accepted_count'] = $stats['accepted_count'] ?? 0;
+                
+                if ($problem['submission_count'] > 0) {
+                    $problem['acceptance_rate'] = round(($problem['accepted_count'] / $problem['submission_count']) * 100, 1);
+                } else {
+                    $problem['acceptance_rate'] = 0;
+                }
+                
                 $problem['test_cases'] = $this->getTestCases($id);
             }
             

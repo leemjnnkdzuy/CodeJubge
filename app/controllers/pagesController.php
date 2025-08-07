@@ -13,6 +13,13 @@ class pagesController extends Controller
     
     public function home()
     {
+        $stats = [];
+        if (isset($_SESSION['user_id'])) {
+            require_once APP_PATH . '/controllers/SubmissionController.php';
+            $submissionController = new SubmissionController();
+            $stats = $submissionController->getUserSubmissionStats($_SESSION['user_id']);
+        }
+        
         include VIEW_PATH . '/home.php';
     }
     
