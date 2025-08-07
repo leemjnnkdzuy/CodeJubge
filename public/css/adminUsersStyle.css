@@ -5,6 +5,11 @@
 	margin-bottom: var(--spacing-xl);
 }
 
+.create-user-btn {
+	font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
 .admin-page-title h2 {
 	margin: 0 0 var(--spacing-xs) 0;
 	font-size: 1.5rem;
@@ -1259,7 +1264,6 @@ textarea.form-input {
 	font-style: italic;
 }
 
-/* Section styling */
 .form-section {
 	margin-bottom: 25px;
 }

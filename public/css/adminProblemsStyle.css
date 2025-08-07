@@ -1,11 +1,115 @@
-/* Admin Problems Page Specific Styles */
+.admin-page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: var(--spacing-xl);
+}
 
-/* Problem management grid */
 .problems-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
 	gap: var(--spacing-lg);
 	margin-bottom: var(--spacing-xl);
+}
+
+.admin-filters {
+	display: flex;
+	gap: var(--spacing-md);
+	margin-bottom: var(--spacing-lg);
+	align-items: center;
+}
+
+.action-buttons {
+	display: flex;
+	gap: var(--spacing-xs);
+}
+
+.btn-action {
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: var(--radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	text-decoration: none;
+	color: var(--white);
+	font-size: 0.875rem;
+}
+
+.btn-action:hover {
+	text-decoration: none;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-edit {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.btn-edit:hover {
+	background: #ffc107;
+	color: var(--white);
+}
+
+.btn-view {
+	background: var(--primary-blue-light);
+	color: var(--primary-blue);
+}
+
+.btn-view:hover {
+	background: var(--primary-blue);
+	color: var(--white);
+}
+
+.btn-test {
+	background: #b074ff;
+}
+
+.btn-test:hover {
+	background: #5c26ff;
+}
+
+.btn-delete {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.btn-delete:hover {
+	background: #dc3545;
+	color: var(--white);
+}
+
+.admin-search {
+	position: relative;
+	flex: 1;
+	max-width: 300px;
+}
+
+.search-input {
+	width: 100%;
+	padding: var(--spacing-sm) var(--spacing-md);
+	padding-left: 2.5rem;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	font-size: 0.875rem;
+}
+
+.admin-search i {
+	position: absolute;
+	left: var(--spacing-sm);
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--text-muted);
+}
+
+.create-problem-btn i {
+	font-size: 1.5rem;
+	font-weight: 800;
+	color: var(--primary-blue);
+	transition: color 0.3s ease;
 }
 
 .problem-card {
@@ -196,15 +300,6 @@
 	outline: none;
 	border-color: var(--primary-blue);
 	box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-/* Problem creation/edit form */
-.problem-form-container {
-	background: var(--white);
-	padding: var(--spacing-xl);
-	border-radius: var(--radius-lg);
-	box-shadow: var(--shadow-light);
-	border: 1px solid var(--border-color);
 }
 
 .problem-form {

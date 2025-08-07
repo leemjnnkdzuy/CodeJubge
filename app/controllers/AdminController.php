@@ -514,7 +514,7 @@ class AdminController extends Controller
     public function problems()
     {
         $problemModel = new ProblemModel();
-        $problems = $problemModel->getProblems(['limit' => 100]);
+        $problems = $problemModel->getProblemsForAdmin(['limit' => 100]);
         
         $data = [
             'title' => 'Quản lý Problems - Admin - CodeJudge',
@@ -527,6 +527,224 @@ class AdminController extends Controller
         ];
         
         $this->renderAdminPage('admin/problems', $data);
+    }
+
+    public function createProblem()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $data = [
+                'title' => 'Tạo Problem - Admin - CodeJudge',
+                'pageTitle' => 'Tạo Problem Mới',
+                'breadcrumb' => [
+                    ['title' => 'Dashboard', 'url' => '/admin'],
+                    ['title' => 'Quản lý Problems', 'url' => '/admin/problems'],
+                    ['title' => 'Tạo Problem']
+                ]
+            ];
+            $this->renderAdminPage('admin/problem_form', $data);
+        }
+    }
+
+    public function storeProblem()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->respondJson(['success' => false, 'message' => 'Method not allowed'], 405);
+            return;
+        }
+
+        try {
+            // Validate required fields
+            $requiredFields = ['title', 'description', 'difficulty'];
+            foreach ($requiredFields as $field) {
+                if (empty($_POST[$field])) {
+                    $this->respondJson(['success' => false, 'message' => "Trường {$field} là bắt buộc"]);
+                    return;
+                }
+            }
+
+            // Prepare data
+            $data = [
+                'title' => trim($_POST['title']),
+                'description' => trim($_POST['description']),
+                'difficulty' => $_POST['difficulty'],
+                'category' => $_POST['category'] ?? null,
+                'input_format' => $_POST['input_format'] ?? '',
+                'output_format' => $_POST['output_format'] ?? '',
+                'constraints' => $_POST['constraints'] ?? '',
+                'time_limit' => (int)($_POST['time_limit'] ?? 1000),
+                'memory_limit' => (int)($_POST['memory_limit'] ?? 128),
+                'editorial' => $_POST['editorial'] ?? '',
+                'is_active' => isset($_POST['is_active']) ? 1 : 0,
+                'created_by' => $_SESSION['user']['id']
+            ];
+
+            // Parse examples
+            if (!empty($_POST['examples'])) {
+                $data['examples'] = json_decode($_POST['examples'], true) ?? [];
+            }
+
+            // Parse test cases
+            if (!empty($_POST['test_cases'])) {
+                $data['test_cases'] = json_decode($_POST['test_cases'], true) ?? [];
+            }
+
+            // Parse tags
+            if (!empty($_POST['tags'])) {
+                $tags = explode(',', $_POST['tags']);
+                $data['tags'] = array_map('trim', $tags);
+            }
+
+            // Parse problem types
+            if (!empty($_POST['problem_types'])) {
+                $data['problem_types'] = json_decode($_POST['problem_types'], true) ?? [];
+            }
+
+            // Parse hints
+            if (!empty($_POST['hints'])) {
+                $data['hints'] = json_decode($_POST['hints'], true) ?? [];
+            }
+
+            $problemModel = new ProblemModel();
+            $result = $problemModel->createProblem($data);
+
+            if ($result['success']) {
+                $this->setNotification('success', $result['message']);
+                $this->respondJson(['success' => true, 'redirect' => '/admin/problems']);
+            } else {
+                $this->respondJson($result);
+            }
+
+        } catch (Exception $e) {
+            error_log("Error in storeProblem: " . $e->getMessage());
+            $this->respondJson(['success' => false, 'message' => 'Có lỗi xảy ra khi tạo problem']);
+        }
+    }
+
+    public function editProblem($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $problemModel = new ProblemModel();
+            $problem = $problemModel->getProblemById($id);
+
+            if (!$problem) {
+                $this->redirectWithMessage('/admin/problems', 'Problem không tồn tại');
+                return;
+            }
+
+            $data = [
+                'title' => 'Sửa Problem - Admin - CodeJudge',
+                'pageTitle' => 'Sửa Problem',
+                'breadcrumb' => [
+                    ['title' => 'Dashboard', 'url' => '/admin'],
+                    ['title' => 'Quản lý Problems', 'url' => '/admin/problems'],
+                    ['title' => 'Sửa Problem']
+                ],
+                'problem' => $problem
+            ];
+            $this->renderAdminPage('admin/problem_form', $data);
+        }
+    }
+
+    public function updateProblem($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->respondJson(['success' => false, 'message' => 'Method not allowed'], 405);
+            return;
+        }
+
+        try {
+            // Validate required fields
+            $requiredFields = ['title', 'description', 'difficulty'];
+            foreach ($requiredFields as $field) {
+                if (empty($_POST[$field])) {
+                    $this->respondJson(['success' => false, 'message' => "Trường {$field} là bắt buộc"]);
+                    return;
+                }
+            }
+
+            // Prepare data (same as storeProblem)
+            $data = [
+                'title' => trim($_POST['title']),
+                'description' => trim($_POST['description']),
+                'difficulty' => $_POST['difficulty'],
+                'category' => $_POST['category'] ?? null,
+                'input_format' => $_POST['input_format'] ?? '',
+                'output_format' => $_POST['output_format'] ?? '',
+                'constraints' => $_POST['constraints'] ?? '',
+                'time_limit' => (int)($_POST['time_limit'] ?? 1000),
+                'memory_limit' => (int)($_POST['memory_limit'] ?? 128),
+                'editorial' => $_POST['editorial'] ?? '',
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+
+            // Parse examples, test cases, tags, etc. (same as storeProblem)
+            if (!empty($_POST['examples'])) {
+                $data['examples'] = json_decode($_POST['examples'], true) ?? [];
+            }
+
+            if (!empty($_POST['test_cases'])) {
+                $data['test_cases'] = json_decode($_POST['test_cases'], true) ?? [];
+            }
+
+            if (!empty($_POST['tags'])) {
+                $tags = explode(',', $_POST['tags']);
+                $data['tags'] = array_map('trim', $tags);
+            }
+
+            if (!empty($_POST['problem_types'])) {
+                $data['problem_types'] = json_decode($_POST['problem_types'], true) ?? [];
+            }
+
+            if (!empty($_POST['hints'])) {
+                $data['hints'] = json_decode($_POST['hints'], true) ?? [];
+            }
+
+            $problemModel = new ProblemModel();
+            $result = $problemModel->updateProblem($id, $data);
+
+            if ($result['success']) {
+                $this->setNotification('success', $result['message']);
+                $this->respondJson(['success' => true, 'redirect' => '/admin/problems']);
+            } else {
+                $this->respondJson($result);
+            }
+
+        } catch (Exception $e) {
+            error_log("Error in updateProblem: " . $e->getMessage());
+            $this->respondJson(['success' => false, 'message' => 'Có lỗi xảy ra khi cập nhật problem']);
+        }
+    }
+
+    public function deleteProblem($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->respondJson(['success' => false, 'message' => 'Method not allowed'], 405);
+            return;
+        }
+
+        try {
+            $problemModel = new ProblemModel();
+            $result = $problemModel->deleteProblem($id);
+
+            if ($result['success']) {
+                $this->setNotification('success', $result['message']);
+                $this->respondJson(['success' => true, 'redirect' => '/admin/problems']);
+            } else {
+                $this->respondJson($result);
+            }
+
+        } catch (Exception $e) {
+            error_log("Error in deleteProblem: " . $e->getMessage());
+            $this->respondJson(['success' => false, 'message' => 'Có lỗi xảy ra khi xóa problem']);
+        }
+    }
+
+    private function respondJson($data, $statusCode = 200)
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
     }
     
     public function submissions()
@@ -658,6 +876,14 @@ class AdminController extends Controller
             }
         }
         return null;
+    }
+    
+    private function setNotification($type, $message)
+    {
+        $_SESSION['notification'] = [
+            'type' => $type,
+            'message' => $message
+        ];
     }
     
     private function renderAdminPage($view, $data = [])

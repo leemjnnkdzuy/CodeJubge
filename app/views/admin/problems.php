@@ -4,10 +4,10 @@
         <p>Xem và quản lý tất cả bài tập trong hệ thống</p>
     </div>
     <div class="admin-page-actions">
-        <button class="btn btn-primary">
+        <a href="/admin/problems/create" class="btn btn-primary create-problem-btn">
             <i class='bx bx-plus'></i>
             Thêm Problem
-        </button>
+        </a>
     </div>
 </div>
 
@@ -50,20 +50,20 @@
             <?php if (!empty($problems) && is_array($problems)): ?>
                 <?php foreach ($problems as $problem): ?>
                 <tr>
-                    <td><?= htmlspecialchars($problem['id']) ?></td>
+                    <td><?= htmlspecialchars($problem['id'] ?? '') ?></td>
                     <td>
                         <div class="problem-title">
-                            <a href="/problems/<?= htmlspecialchars($problem['slug']) ?>" target="_blank">
-                                <?= htmlspecialchars($problem['title']) ?>
+                            <a href="/problems/<?= htmlspecialchars($problem['slug'] ?? '') ?>" target="_blank">
+                                <?= htmlspecialchars($problem['title'] ?? '') ?>
                             </a>
                         </div>
                     </td>
                     <td>
-                        <span class="problem-slug"><?= htmlspecialchars($problem['slug']) ?></span>
+                        <span class="problem-slug"><?= htmlspecialchars($problem['slug'] ?? '') ?></span>
                     </td>
                     <td>
-                        <span class="difficulty-badge difficulty-<?= htmlspecialchars($problem['difficulty']) ?>">
-                            <?= ucfirst(htmlspecialchars($problem['difficulty'])) ?>
+                        <span class="difficulty-badge difficulty-<?= htmlspecialchars($problem['difficulty'] ?? 'easy') ?>">
+                            <?= ucfirst(htmlspecialchars($problem['difficulty'] ?? 'Easy')) ?>
                         </span>
                     </td>
                     <td><?= htmlspecialchars($problem['category'] ?? 'N/A') ?></td>
@@ -87,18 +87,24 @@
                         </span>
                     </td>
                     <td>
-                        <span class="status-badge status-<?= $problem['is_active'] ? 'active' : 'inactive' ?>">
-                            <?= $problem['is_active'] ? 'Hoạt động' : 'Không hoạt động' ?>
+                        <span class="status-badge status-<?= ($problem['is_active'] ?? 0) ? 'active' : 'inactive' ?>">
+                            <?= ($problem['is_active'] ?? 0) ? 'Hoạt động' : 'Không hoạt động' ?>
                         </span>
                     </td>
                     <td>
-                        <?php if (isset($problem['creator_name'])): ?>
+                        <?php if (isset($problem['creator_name']) && $problem['creator_name']): ?>
                             <?= htmlspecialchars($problem['creator_name']) ?>
                         <?php else: ?>
                             <span class="text-muted">N/A</span>
                         <?php endif; ?>
                     </td>
-                    <td><?= date('d/m/Y', strtotime($problem['created_at'])) ?></td>
+                    <td>
+                        <?php if (isset($problem['created_at']) && $problem['created_at']): ?>
+                            <?= date('d/m/Y', strtotime($problem['created_at'])) ?>
+                        <?php else: ?>
+                            <span class="text-muted">N/A</span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn-action btn-edit" title="Chỉnh sửa">
@@ -209,7 +215,6 @@
 }
 
 .btn-test {
-    background: var(--secondary-purple);
     color: var(--white);
 }
 
@@ -223,3 +228,5 @@
     }
 }
 </style>
+
+<script src="/js/adminProblems.js"></script>

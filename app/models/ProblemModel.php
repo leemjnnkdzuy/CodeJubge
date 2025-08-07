@@ -115,6 +115,45 @@ class ProblemModel {
             ];
         }
     }
+
+    public function getProblemsForAdmin($filters = []): array {
+        try {
+            $limit = $filters['limit'] ?? 10;
+            $offset = $filters['offset'] ?? 0;
+            
+            $sql = "SELECT 
+                        p.*,
+                        u.username as creator_name
+                    FROM problems p
+                    LEFT JOIN users u ON p.created_by = u.id
+                    ORDER BY p.id DESC
+                    LIMIT ? OFFSET ?";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$limit, $offset]);
+            
+            $problems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Add default stats for each problem
+            foreach ($problems as &$problem) {
+                $problem['solved_count'] = 0;
+                $problem['attempt_count'] = 0;  
+                $problem['acceptance_rate'] = 0;
+                
+                // Process JSON fields
+                $problem['examples'] = json_decode($problem['examples'] ?? '[]', true);
+                $problem['problem_types'] = json_decode($problem['problem_types'] ?? '[]', true);
+                $problem['tags'] = json_decode($problem['tags'] ?? '[]', true);
+                $problem['hints'] = json_decode($problem['hints'] ?? '[]', true);
+            }
+            
+            return $problems;
+            
+        } catch (PDOException $e) {
+            error_log("Error getting problems for admin: " . $e->getMessage());
+            return [];
+        }
+    }
     
     public function getProblemsStats(): array
     {
@@ -182,6 +221,247 @@ class ProblemModel {
             error_log("Error getting example submissions: " . $e->getMessage());
             return [];
         }
+    }
+
+    public function getProblemById($id): ?array {
+        try {
+            $sql = "SELECT p.*, u.username as creator_name 
+                   FROM problems p
+                   LEFT JOIN users u ON p.created_by = u.id  
+                   WHERE p.id = ?";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$id]);
+            
+            $problem = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($problem) {
+                // Decode JSON fields
+                $problem['examples'] = json_decode($problem['examples'] ?? '[]', true);
+                $problem['problem_types'] = json_decode($problem['problem_types'] ?? '[]', true);
+                $problem['tags'] = json_decode($problem['tags'] ?? '[]', true);
+                $problem['hints'] = json_decode($problem['hints'] ?? '[]', true);
+                
+                // Get test cases
+                $problem['test_cases'] = $this->getTestCases($id);
+            }
+            
+            return $problem ?: null;
+            
+        } catch (PDOException $e) {
+            error_log("Error getting problem by ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function getTestCases($problemId): array {
+        try {
+            $sql = "SELECT * FROM test_cases WHERE problem_id = ? ORDER BY id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$problemId]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (PDOException $e) {
+            error_log("Error getting test cases: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function createProblem($data): array {
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Tạo slug từ title
+            $slug = $this->generateSlug($data['title']);
+            
+            // Insert problem
+            $sql = "INSERT INTO problems (
+                title, slug, description, difficulty, category, 
+                input_format, output_format, constraints, 
+                examples, time_limit, memory_limit, 
+                problem_types, tags, editorial, hints,
+                is_active, created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                $data['title'],
+                $slug,
+                $data['description'],
+                $data['difficulty'],
+                $data['category'] ?? null,
+                $data['input_format'] ?? '',
+                $data['output_format'] ?? '',
+                $data['constraints'] ?? '',
+                json_encode($data['examples'] ?? []),
+                $data['time_limit'] ?? 1000,
+                $data['memory_limit'] ?? 128,
+                json_encode($data['problem_types'] ?? []),
+                json_encode($data['tags'] ?? []),
+                $data['editorial'] ?? '',
+                json_encode($data['hints'] ?? []),
+                $data['is_active'] ?? 1,
+                $data['created_by']
+            ]);
+            
+            $problemId = $this->pdo->lastInsertId();
+            
+            // Insert test cases nếu có
+            if (!empty($data['test_cases'])) {
+                $this->insertTestCases($problemId, $data['test_cases']);
+            }
+            
+            $this->pdo->commit();
+            
+            return [
+                'success' => true,
+                'message' => 'Problem đã được tạo thành công',
+                'problem_id' => $problemId,
+                'slug' => $slug
+            ];
+            
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Error creating problem: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi tạo problem: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function updateProblem($id, $data): array {
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Update problem
+            $sql = "UPDATE problems SET 
+                title = ?, description = ?, difficulty = ?, category = ?,
+                input_format = ?, output_format = ?, constraints = ?,
+                examples = ?, time_limit = ?, memory_limit = ?,
+                problem_types = ?, tags = ?, editorial = ?, hints = ?,
+                is_active = ?, updated_at = NOW()
+                WHERE id = ?";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                $data['title'],
+                $data['description'],
+                $data['difficulty'],
+                $data['category'] ?? null,
+                $data['input_format'] ?? '',
+                $data['output_format'] ?? '',
+                $data['constraints'] ?? '',
+                json_encode($data['examples'] ?? []),
+                $data['time_limit'] ?? 1000,
+                $data['memory_limit'] ?? 128,
+                json_encode($data['problem_types'] ?? []),
+                json_encode($data['tags'] ?? []),
+                $data['editorial'] ?? '',
+                json_encode($data['hints'] ?? []),
+                $data['is_active'] ?? 1,
+                $id
+            ]);
+            
+            // Update test cases nếu có
+            if (isset($data['test_cases'])) {
+                // Xóa test cases cũ
+                $this->deleteTestCases($id);
+                // Insert test cases mới
+                if (!empty($data['test_cases'])) {
+                    $this->insertTestCases($id, $data['test_cases']);
+                }
+            }
+            
+            $this->pdo->commit();
+            
+            return [
+                'success' => true,
+                'message' => 'Problem đã được cập nhật thành công'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Error updating problem: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi cập nhật problem: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function deleteProblem($id): array {
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Xóa test cases
+            $this->deleteTestCases($id);
+            
+            // Xóa problem
+            $sql = "DELETE FROM problems WHERE id = ?";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$id]);
+            
+            $this->pdo->commit();
+            
+            return [
+                'success' => true,
+                'message' => 'Problem đã được xóa thành công'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            error_log("Error deleting problem: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi xóa problem: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    private function generateSlug($title): string {
+        $slug = strtolower($title);
+        $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
+        $slug = preg_replace('/[\s-]+/', '-', $slug);
+        $slug = trim($slug, '-');
+        
+        // Kiểm tra slug đã tồn tại chưa
+        $counter = 1;
+        $originalSlug = $slug;
+        while ($this->slugExists($slug)) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
+    }
+
+    private function slugExists($slug): bool {
+        $sql = "SELECT COUNT(*) FROM problems WHERE slug = ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$slug]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    private function insertTestCases($problemId, $testCases): void {
+        $sql = "INSERT INTO test_cases (problem_id, input, expected_output, is_sample, created_at) VALUES (?, ?, ?, ?, NOW())";
+        $stmt = $this->pdo->prepare($sql);
+        
+        foreach ($testCases as $testCase) {
+            $stmt->execute([
+                $problemId,
+                $testCase['input'],
+                $testCase['expected_output'],
+                $testCase['is_sample'] ?? 0
+            ]);
+        }
+    }
+
+    private function deleteTestCases($problemId): void {
+        $sql = "DELETE FROM test_cases WHERE problem_id = ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$problemId]);
     }
 }
 ?>

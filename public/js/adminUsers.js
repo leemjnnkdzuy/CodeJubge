@@ -161,7 +161,6 @@ function openEditModal(userId) {
 function loadUserData(userId) {
 	showLoadingState();
 
-	// Try to fetch user data from server first
 	fetch(`/admin/users/get/${userId}`, {
 		method: "GET",
 		headers: {
@@ -174,7 +173,6 @@ function loadUserData(userId) {
 			if (data.success && data.user) {
 				populateFormFromUserData(data.user);
 			} else {
-				// Fallback to loading from DOM table
 				loadUserDataFromDOM(userId);
 			}
 		})
@@ -183,7 +181,6 @@ function loadUserData(userId) {
 				"Error loading user data from server, falling back to DOM:",
 				error
 			);
-			// Fallback to loading from DOM table
 			loadUserDataFromDOM(userId);
 		})
 		.finally(() => {
@@ -216,9 +213,7 @@ function loadUserDataFromDOM(userId) {
 				"warning",
 				"Không thể tải đầy đủ dữ liệu user. Một số thông tin có thể không hiển thị."
 			);
-			// Reset form but still allow editing
 			resetForm();
-			// Enable submit button so user can still make changes
 			setTimeout(() => {
 				toggleSubmitButton(true);
 			}, 100);
@@ -317,7 +312,6 @@ function populateFormFromRow(row) {
 			? -1
 			: parseInt(ratingText.replace(/,/g, "")) || -1;
 
-		// Handle user name
 		let firstName = "",
 			lastName = "";
 		if (userInfo) {
@@ -329,7 +323,6 @@ function populateFormFromRow(row) {
 			}
 		}
 
-		// Populate form fields
 		document.getElementById("firstName").value = firstName;
 		document.getElementById("lastName").value = lastName;
 		document.getElementById("username").value = username;
@@ -338,7 +331,6 @@ function populateFormFromRow(row) {
 		document.getElementById("isActive").checked = isActive;
 		document.getElementById("rating").value = rating;
 
-		// Handle avatar
 		const avatarImg = cells[1]?.querySelector(".user-avatar .avatar-image");
 		if (avatarImg && avatarImg.src) {
 			document.getElementById("currentAvatarPreview").src = avatarImg.src;
@@ -347,7 +339,6 @@ function populateFormFromRow(row) {
 				"/assets/default_avatar.png";
 		}
 
-		// Reset badges selection since we can't get this from DOM
 		selectedBadges = [];
 		document.querySelectorAll(".badge-item.selected").forEach((badge) => {
 			badge.classList.remove("selected");
@@ -686,7 +677,6 @@ function showFieldError(field, message) {
 }
 
 function clearFieldError(fieldOrEvent) {
-	// Handle both event object and direct field parameter
 	const field = fieldOrEvent.target || fieldOrEvent;
 
 	if (field && field.closest) {
@@ -736,10 +726,8 @@ function showModal() {
 				firstInput.focus();
 			}
 
-			// Re-setup badge selection when modal is shown
 			setupBadgeSelection();
 
-			// Reset badges toggle to initial state
 			resetBadgesToggle();
 		}, 300);
 	}
@@ -810,14 +798,12 @@ function openDeleteModal(userId, userName) {
 		deleteUserName.textContent = userName;
 	}
 
-	// Remove any existing event listeners
 	if (confirmDeleteBtn) {
 		const newConfirmBtn = confirmDeleteBtn.cloneNode(true);
 		confirmDeleteBtn.parentNode.replaceChild(newConfirmBtn, confirmDeleteBtn);
 		newConfirmBtn.onclick = () => confirmDeleteUser(userId);
 	}
 
-	// Add cancel button event listener
 	if (cancelDeleteBtn) {
 		const newCancelBtn = cancelDeleteBtn.cloneNode(true);
 		cancelDeleteBtn.parentNode.replaceChild(newCancelBtn, cancelDeleteBtn);
@@ -828,20 +814,17 @@ function openDeleteModal(userId, userName) {
 		deleteModal.classList.add("show");
 		document.body.style.overflow = "hidden";
 
-		// Add event listeners for closing modal
 		setupDeleteModalEvents(deleteModal);
 	}
 }
 
 function setupDeleteModalEvents(modal) {
-	// Close on backdrop click
 	modal.addEventListener("click", function (e) {
 		if (e.target === modal) {
 			closeDeleteModal();
 		}
 	});
 
-	// Close on escape key
 	const escapeHandler = function (e) {
 		if (e.key === "Escape") {
 			closeDeleteModal();
@@ -850,7 +833,6 @@ function setupDeleteModalEvents(modal) {
 	};
 	document.addEventListener("keydown", escapeHandler);
 
-	// Close button
 	const closeBtn = modal.querySelector(".delete-modal-close");
 	if (closeBtn) {
 		closeBtn.onclick = closeDeleteModal;
@@ -875,7 +857,6 @@ function confirmDeleteUser(userId) {
 			if (data.success) {
 				showNotification("success", "User đã được xóa thành công!");
 				closeDeleteModal();
-				// Refresh only the table instead of full page reload
 				refreshUsersTable();
 			} else {
 				showNotification("error", data.message || "Có lỗi xảy ra khi xóa user");
@@ -897,7 +878,6 @@ function closeDeleteModal() {
 		deleteModal.classList.remove("show");
 		document.body.style.overflow = "";
 
-		// Clean up event listeners
 		const newModal = deleteModal.cloneNode(true);
 		deleteModal.parentNode.replaceChild(newModal, deleteModal);
 	}
@@ -918,7 +898,6 @@ async function refreshUsersTable() {
 		const tableContainer = document.querySelector(".admin-table-container");
 		if (!tableContainer) return;
 
-		// Show loading state
 		const originalContent = tableContainer.innerHTML;
 		tableContainer.innerHTML = `
 			<div class="loading-container" style="text-align: center; padding: 2rem;">
@@ -927,7 +906,6 @@ async function refreshUsersTable() {
 			</div>
 		`;
 
-		// Fetch fresh data
 		const response = await fetch("/admin/users/table-data", {
 			method: "GET",
 			headers: {
@@ -943,10 +921,8 @@ async function refreshUsersTable() {
 		const data = await response.json();
 
 		if (data.success && data.html) {
-			// Update table content
 			tableContainer.innerHTML = data.html;
 
-			// Re-initialize event listeners for new table content
 			initializeTableEventListeners();
 		} else {
 			throw new Error("Invalid response data");
@@ -958,7 +934,6 @@ async function refreshUsersTable() {
 			"Không thể cập nhật bảng dữ liệu. Vui lòng refresh trang."
 		);
 
-		// Fallback to page reload after a delay
 		setTimeout(() => {
 			window.location.reload();
 		}, 2000);
@@ -966,7 +941,6 @@ async function refreshUsersTable() {
 }
 
 function initializeTableEventListeners() {
-	// Re-setup edit button listeners
 	const editButtons = document.querySelectorAll(".btn-edit");
 
 	editButtons.forEach((btn) => {
@@ -979,7 +953,6 @@ function initializeTableEventListeners() {
 		});
 	});
 
-	// Re-setup delete button listeners
 	document.querySelectorAll(".btn-delete").forEach((btn) => {
 		btn.addEventListener("click", function () {
 			const userId =
