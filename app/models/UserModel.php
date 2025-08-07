@@ -86,7 +86,7 @@ class UserModel
         }
     }
 
-    public function loginUser($email, $password)
+    public function loginUser($email, $password): array
     {
         try {
             $query = "SELECT * FROM {$this->table} WHERE email = :email AND is_active = 1";
@@ -682,7 +682,6 @@ class UserModel
     public function getUserByUsernameAdmin($username)
     {
         try {
-            // Admin version - kiểm tra tất cả users kể cả bị vô hiệu hóa để tránh duplicate
             $query = "SELECT * FROM {$this->table} WHERE username = :username";
             $user = $this->db->selectOne($query, ['username' => $username]);
             
@@ -700,7 +699,6 @@ class UserModel
     public function getUserByEmailAdmin($email)
     {
         try {
-            // Admin version - kiểm tra tất cả users kể cả bị vô hiệu hóa để tránh duplicate
             $query = "SELECT * FROM {$this->table} WHERE email = :email";
             $user = $this->db->selectOne($query, ['email' => $email]);
             
