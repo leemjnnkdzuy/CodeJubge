@@ -6,6 +6,8 @@
     <title><?= isset($title) ? htmlspecialchars($title) : 'CodeJudge' ?></title>
     <meta name="description" content="<?= isset($description) ? htmlspecialchars($description) : 'Practice coding problems with automatic evaluation' ?>">
     
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
     <link rel="stylesheet" href="/css/globalStyle.css">
     <link rel="stylesheet" href="/css/globalSidebarStyle.css">
     <?php
@@ -18,7 +20,6 @@
         echo '<link rel="stylesheet" href="/css/problemsStyle.css">';
     } elseif (strpos($_SERVER['REQUEST_URI'], '/discussions') === 0) {
         echo '<link rel="stylesheet" href="/css/discussionsStyle.css">';
-        // Check if it's a discussion detail page
         if (preg_match('/\/discussions\/\d+/', $_SERVER['REQUEST_URI'])) {
             echo '<link rel="stylesheet" href="/css/discussionDetailStyle.css">';
         }

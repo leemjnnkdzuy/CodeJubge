@@ -115,6 +115,126 @@ class AdminController extends Controller
         $this->renderAdminPage('admin/users', $data);
     }
     
+    public function getUsersTableData()
+    {
+        if (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            return;
+        }
+        
+        $userModel = new UserModel();
+        $users = $userModel->getAllUsers();
+        
+        // Generate table HTML
+        ob_start();
+        require_once APP_PATH . '/helpers/AvatarHelper.php';
+        ?>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Problems Solved</th>
+                    <th>Rating</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($users) && is_array($users)): ?>
+                    <?php foreach ($users as $user): 
+                    $userAvatar = AvatarHelper::base64ToImageSrc($user['avatar'] ?? '');
+                    $userInitials = AvatarHelper::getInitials($user['first_name'] . ' ' . $user['last_name']);
+                    ?>
+                    <tr>
+                        <td><?= htmlspecialchars($user['id']) ?></td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">
+                                    <?php if (!empty($user['avatar'])): ?>
+                                        <img src="<?= $userAvatar ?>" alt="Avatar" class="avatar-image">
+                                    <?php else: ?>
+                                        <div class="avatar-initials"><?= $userInitials ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="user-details">
+                                    <div class="user-name"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>@<?= htmlspecialchars($user['username']) ?></td>
+                        <td><?= htmlspecialchars($user['email']) ?></td>
+                        <td><span class="role-badge role-<?= strtolower($user['role']) ?>"><?= ucfirst($user['role']) ?></span></td>
+                        <td><span class="status-badge <?= $user['is_active'] ? 'status-active' : 'status-inactive' ?>"><?= $user['is_active'] ? 'Hoạt động' : 'Không hoạt động' ?></span></td>
+                        <td>0</td>
+                        <td><?= $user['rating'] > 0 ? number_format($user['rating']) : 'Chưa xếp hạng' ?></td>
+                        <td><?= date('d/m/Y', strtotime($user['created_at'])) ?></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-action btn-edit" data-user-id="<?= $user['id'] ?>" title="Chỉnh sửa">
+                                    <i class='bx bx-edit'></i>
+                                </button>
+                                <a href="/user/<?= htmlspecialchars($user['username']) ?>" class="btn-action btn-view" target="_blank" title="Xem chi tiết">
+                                    <i class='bx bx-show'></i>
+                                </a>
+                                <?php if ($user['role'] !== 'admin'): ?>
+                                <button class="btn-action btn-delete" data-user-id="<?= $user['id'] ?>" title="Xóa">
+                                    <i class='bx bx-trash'></i>
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <i class='bx bx-user-x' style="font-size: 3rem; display: block; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p>Không có dữ liệu người dùng</p>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        <?php
+        $tableHtml = ob_get_clean();
+        
+        echo json_encode([
+            'success' => true,
+            'html' => $tableHtml
+        ]);
+    }
+    
+    public function getUserById($userId)
+    {
+        if (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            return;
+        }
+        
+        $userModel = new UserModel();
+        $user = $userModel->getUserByIdAdmin($userId);
+        
+        if (!$user) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'User not found']);
+            return;
+        }
+        
+        $user['badges'] = isset($user['badges']) && !empty($user['badges']) ? json_decode($user['badges'], true) : [];
+        
+        echo json_encode([
+            'success' => true,
+            'user' => $user
+        ]);
+    }
+    
     public function createUser()
     {
         if (!$this->isPostRequest()) {
@@ -123,17 +243,19 @@ class AdminController extends Controller
             return;
         }
         
-        $postData = json_decode(file_get_contents('php://input'), true);
+        $postData = $_POST;
+        if (empty($postData)) {
+            $postData = json_decode(file_get_contents('php://input'), true);
+        }
         
         if (!$postData) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Invalid JSON data']);
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
             return;
         }
         
         $userModel = new UserModel();
         
-        // Validate required fields
         $requiredFields = ['firstName', 'lastName', 'username', 'email', 'password'];
         foreach ($requiredFields as $field) {
             if (empty($postData[$field])) {
@@ -143,20 +265,18 @@ class AdminController extends Controller
             }
         }
         
-        // Check if username or email already exists
-        if ($userModel->getUserByUsername($postData['username'])) {
+        if ($userModel->getUserByUsernameAdmin($postData['username'])) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Username đã tồn tại']);
             return;
         }
         
-        if ($userModel->getUserByEmail($postData['email'])) {
+        if ($userModel->getUserByEmailAdmin($postData['email'])) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Email đã tồn tại']);
             return;
         }
         
-        // Create user data
         $userData = [
             'firstName' => $postData['firstName'],
             'lastName' => $postData['lastName'],
@@ -164,8 +284,49 @@ class AdminController extends Controller
             'email' => $postData['email'],
             'password' => $postData['password'],
             'role' => $postData['role'] ?? 'user',
-            'is_active' => isset($postData['isActive']) ? 1 : 0
+            'is_active' => ($postData['isActive'] ?? '0') === '1' ? 1 : 0
         ];
+
+        if (isset($postData['bio'])) {
+            $userData['bio'] = $postData['bio'];
+        }
+        
+        if (isset($postData['rating'])) {
+            $userData['rating'] = intval($postData['rating']);
+        }
+
+        $socialFields = ['github_url', 'linkedin_url', 'website_url', 'youtube_url', 'facebook_url', 'instagram_url'];
+        foreach ($socialFields as $field) {
+            if (isset($postData[$field]) && !empty($postData[$field])) {
+                $userData[$field] = $postData[$field];
+            }
+        }
+
+        if (isset($postData['badges'])) {
+            if (is_array($postData['badges'])) {
+                $userData['badges'] = json_encode($postData['badges']);
+            } elseif (is_string($postData['badges'])) {
+                $badgesArray = json_decode($postData['badges'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($badgesArray)) {
+                    $userData['badges'] = $postData['badges'];
+                } else {
+                    $userData['badges'] = '[]';
+                }
+            } else {
+                $userData['badges'] = '[]';
+            }
+        } else {
+            $userData['badges'] = '[]';
+        }
+
+        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+            $avatarData = $this->handleAvatarUpload($_FILES['avatar']);
+            if ($avatarData) {
+                $userData['avatar'] = $avatarData;
+            }
+        } else {
+            $userData['avatar'] = $this->getDefaultAvatarBase64();
+        }
         
         try {
             $result = $userModel->createUser($userData);
@@ -183,31 +344,35 @@ class AdminController extends Controller
     
     public function updateUser($userId)
     {
-        if (!$this->isPutRequest()) {
+        if (!$this->isPutRequest() && !$this->isPostRequest()) {
             http_response_code(405);
             echo json_encode(['success' => false, 'message' => 'Method not allowed']);
             return;
         }
         
-        $postData = json_decode(file_get_contents('php://input'), true);
+        if ($this->isPostRequest()) {
+            $postData = $_POST;
+            $files = $_FILES;
+        } else {
+            $postData = json_decode(file_get_contents('php://input'), true);
+            $files = [];
+        }
         
         if (!$postData) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Invalid JSON data']);
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
             return;
         }
         
         $userModel = new UserModel();
         
-        // Check if user exists
-        $existingUser = $userModel->getUserById($userId);
+        $existingUser = $userModel->getUserByIdAdmin($userId); // Sử dụng method admin để có thể cập nhật user bị vô hiệu hóa
         if (!$existingUser) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'User không tồn tại']);
             return;
         }
         
-        // Validate required fields
         $requiredFields = ['firstName', 'lastName', 'username', 'email'];
         foreach ($requiredFields as $field) {
             if (empty($postData[$field])) {
@@ -217,30 +382,67 @@ class AdminController extends Controller
             }
         }
         
-        // Check if username or email already exists (excluding current user)
-        $usernameUser = $userModel->getUserByUsername($postData['username']);
+        $usernameUser = $userModel->getUserByUsernameAdmin($postData['username']);
         if ($usernameUser && $usernameUser['id'] != $userId) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Username đã tồn tại']);
             return;
         }
         
-        $emailUser = $userModel->getUserByEmail($postData['email']);
+        $emailUser = $userModel->getUserByEmailAdmin($postData['email']);
         if ($emailUser && $emailUser['id'] != $userId) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Email đã tồn tại']);
             return;
         }
         
-        // Update user data
         $userData = [
             'first_name' => $postData['firstName'],
             'last_name' => $postData['lastName'],
             'username' => $postData['username'],
             'email' => $postData['email'],
             'role' => $postData['role'] ?? 'user',
-            'is_active' => isset($postData['isActive']) ? 1 : 0
+            'is_active' => ($postData['isActive'] ?? '0') === '1' ? 1 : 0
         ];
+
+        if (isset($postData['bio'])) {
+            $userData['bio'] = $postData['bio'];
+        }
+        
+        if (isset($postData['rating'])) {
+            $userData['rating'] = intval($postData['rating']);
+        }
+
+        $socialFields = ['github_url', 'linkedin_url', 'website_url', 'youtube_url', 'facebook_url', 'instagram_url'];
+        foreach ($socialFields as $field) {
+            if (isset($postData[$field])) {
+                $userData[$field] = !empty($postData[$field]) ? $postData[$field] : null;
+            }
+        }
+
+        if (isset($postData['badges'])) {
+            if (is_array($postData['badges'])) {
+                $userData['badges'] = json_encode($postData['badges']);
+            } elseif (is_string($postData['badges'])) {
+                $badgesArray = json_decode($postData['badges'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($badgesArray)) {
+                    $userData['badges'] = $postData['badges'];
+                } else {
+                    $userData['badges'] = '[]';
+                }
+            } else {
+                $userData['badges'] = '[]';
+            }
+        } else {
+            $userData['badges'] = '[]';
+        }
+
+        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+            $avatarData = $this->handleAvatarUpload($_FILES['avatar']);
+            if ($avatarData) {
+                $userData['avatar'] = $avatarData;
+            }
+        }
         
         try {
             $result = $userModel->updateUserAdmin($userId, $userData);
@@ -266,22 +468,19 @@ class AdminController extends Controller
         
         $userModel = new UserModel();
         
-        // Check if user exists
-        $existingUser = $userModel->getUserById($userId);
+        $existingUser = $userModel->getUserByIdAdmin($userId); // Sử dụng method admin để có thể xóa user bị vô hiệu hóa
         if (!$existingUser) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'User không tồn tại']);
             return;
         }
         
-        // Prevent deleting admin users
         if ($existingUser['role'] === 'admin') {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Không thể xóa tài khoản admin']);
             return;
         }
         
-        // Prevent self-deletion
         if ($userId == $_SESSION['user_id']) {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Không thể xóa tài khoản của chính mình']);
@@ -315,7 +514,7 @@ class AdminController extends Controller
     public function problems()
     {
         $problemModel = new ProblemModel();
-        $problems = $problemModel->getProblems(['limit' => 100]); // Get more problems for admin view
+        $problems = $problemModel->getProblems(['limit' => 100]);
         
         $data = [
             'title' => 'Quản lý Problems - Admin - CodeJudge',
@@ -332,7 +531,6 @@ class AdminController extends Controller
     
     public function submissions()
     {
-        // Get all submissions with user and problem info
         $submissions = $this->getSubmissions();
         
         $data = [
@@ -420,6 +618,46 @@ class AdminController extends Controller
         } catch (Exception $e) {
             return [];
         }
+    }
+    
+    private function handleAvatarUpload($file)
+    {
+        try {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $maxSize = 2 * 1024 * 1024;
+            
+            if (!in_array($file['type'], $allowedTypes)) {
+                throw new Exception('Invalid file type. Only JPG, PNG, GIF, WebP are allowed.');
+            }
+            
+            if ($file['size'] > $maxSize) {
+                throw new Exception('File too large. Maximum size is 2MB.');
+            }
+            
+            $imageData = file_get_contents($file['tmp_name']);
+            if ($imageData === false) {
+                throw new Exception('Error reading uploaded file.');
+            }
+            
+            return base64_encode($imageData);
+            
+        } catch (Exception $e) {
+            error_log("Avatar upload error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    private function getDefaultAvatarBase64()
+    {
+        $defaultAvatarPath = dirname(dirname(__DIR__)) . '/public/assets/default_avatar.png';
+        
+        if (file_exists($defaultAvatarPath)) {
+            $imageData = file_get_contents($defaultAvatarPath);
+            if ($imageData !== false) {
+                return base64_encode($imageData);
+            }
+        }
+        return null;
     }
     
     private function renderAdminPage($view, $data = [])

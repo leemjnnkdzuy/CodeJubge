@@ -22,10 +22,10 @@ class ProfileController extends Controller
             exit;
         }
         
-        $currentUser = $this->userModel->getUserById($_SESSION['user_id']);
+        $viewingUser = $this->userModel->getUserById($_SESSION['user_id']);
         $userBadges = $this->userModel->getUserBadges($_SESSION['user_id']);
         
-        if (!$currentUser) {
+        if (!$viewingUser) {
             NotificationHelper::error('Không tìm thấy thông tin người dùng');
             header('Location: /login');
             exit;
@@ -35,11 +35,12 @@ class ProfileController extends Controller
             $userBadges = [];
         }
         
-        // Include ranking system
+        $isOwnProfile = true;
+        
         require_once APP_PATH . '/helpers/LeaderboardHelper.php';
         
-        $title = 'Trang cá nhân - ' . $currentUser['first_name'] . ' ' . $currentUser['last_name'];
-        $description = 'Trang cá nhân của ' . $currentUser['username'] . ' trên CodeJudge';
+        $title = 'Trang cá nhân - ' . $viewingUser['first_name'] . ' ' . $viewingUser['last_name'];
+        $description = 'Trang cá nhân của ' . $viewingUser['username'] . ' trên CodeJudge';
         
         include VIEW_PATH . '/profile.php';
     }
@@ -53,10 +54,10 @@ class ProfileController extends Controller
             exit;
         }
         
-        $profileUser = $this->userModel->getUserById($userId);
+        $viewingUser = $this->userModel->getUserById($userId);
         $userBadges = $this->userModel->getUserBadges($userId);
         
-        if (!$profileUser) {
+        if (!$viewingUser) {
             NotificationHelper::error('Không tìm thấy người dùng');
             header('Location: /home');
             exit;
@@ -76,8 +77,8 @@ class ProfileController extends Controller
         // Include ranking system
         require_once APP_PATH . '/helpers/LeaderboardHelper.php';
         
-        $title = 'Trang cá nhân - ' . $profileUser['first_name'] . ' ' . $profileUser['last_name'];
-        $description = 'Trang cá nhân của ' . $profileUser['username'] . ' trên CodeJudge';
+        $title = 'Trang cá nhân - ' . $viewingUser['first_name'] . ' ' . $viewingUser['last_name'];
+        $description = 'Trang cá nhân của ' . $viewingUser['username'] . ' trên CodeJudge';
         
         include VIEW_PATH . '/profile.php';
     }

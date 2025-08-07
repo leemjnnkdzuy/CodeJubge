@@ -79,7 +79,7 @@ $current_page = basename($current_uri);
                     }
                     ?>
                     <li class="nav-item user-profile-item">
-                        <a href="/profile" class="nav-link user-profile-link">
+                        <a href="/profile" class="nav-link user-profile-link <?= strpos($current_uri, '/profile') !== false ? 'active' : '' ?>">
                             <div class="user-avatar-sidebar">
                                 <?php if ($currentUser && $currentUser['avatar']): ?>
                                     <img src="<?= AvatarHelper::base64ToImageSrc($currentUser['avatar']) ?>" alt="Avatar" class="avatar-image">
@@ -134,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
     sidebarToggle.addEventListener('click', function() {
         sidebar.classList.toggle('collapsed');
         
-        // Update main content class
         if (sidebar.classList.contains('collapsed')) {
             mainContent.classList.add('sidebar-collapsed');
         } else {

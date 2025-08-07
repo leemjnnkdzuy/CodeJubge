@@ -27,6 +27,7 @@ if ($notification): ?>
         </button>
     </div>
 </div>
+<?php endif; ?>
 
 <style>
 .popup-notification {
@@ -143,6 +144,7 @@ function closeNotification() {
     }
 }
 
+<?php if ($notification): ?>
 document.addEventListener('DOMContentLoaded', function() {
     const notification = document.getElementById('popupNotification');
     if (notification) {
@@ -155,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 });
+<?php endif; ?>
 
 function showNotification(type, message) {
     const existing = document.getElementById('popupNotification');
@@ -206,5 +209,3 @@ function showNotification(type, message) {
     }, 5000);
 }
 </script>
-
-<?php endif; ?>

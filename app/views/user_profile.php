@@ -246,7 +246,6 @@ $content = ob_start();
 
 <?php 
 $content = ob_get_clean();
-$title = "Hồ sơ - " . htmlspecialchars($viewingUser['username']) . " - CodeJudge";
 $css = '/css/userStyle.css';
 include VIEW_PATH . '/layouts/pagesWithSidebar.php';
 ?>

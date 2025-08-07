@@ -94,14 +94,14 @@
                     <td><?= date('d/m/Y', strtotime($user['created_at'])) ?></td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-action btn-edit" title="Chỉnh sửa">
+                            <button class="btn-action btn-edit" title="Chỉnh sửa" data-user-id="<?= htmlspecialchars($user['id']) ?>">
                                 <i class='bx bx-edit'></i>
                             </button>
-                            <button class="btn-action btn-view" title="Xem chi tiết">
+                            <a href="<?php echo SITE_URL . '/user/' . htmlspecialchars($user['username']); ?>" class="btn-action btn-view" title="Xem chi tiết" data-user-id="<?= htmlspecialchars($user['id']) ?>" target="_blank">
                                 <i class='bx bx-show'></i>
-                            </button>
+                            </a>
                             <?php if ($user['role'] !== 'admin'): ?>
-                            <button class="btn-action btn-delete" title="Xóa">
+                            <button class="btn-action btn-delete" title="Xóa" data-user-id="<?= htmlspecialchars($user['id']) ?>">
                                 <i class='bx bx-trash'></i>
                             </button>
                             <?php endif; ?>
@@ -118,115 +118,252 @@
     </table>
 </div>
 
-<!-- User Modal (Create/Edit) -->
-<div id="userModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalTitle">Thêm User Mới</h2>
-            <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="userForm" class="edit-form">
-                <div class="form-group">
-                    <label for="firstName">
-                        <i class='bx bx-user'></i>
-                        Họ
-                    </label>
-                    <input type="text" id="firstName" name="firstName" class="form-input" required placeholder="Nhập họ">
-                </div>
-                
-                <div class="form-group">
-                    <label for="lastName">
-                        <i class='bx bx-user'></i>
-                        Tên
-                    </label>
-                    <input type="text" id="lastName" name="lastName" class="form-input" required placeholder="Nhập tên">
-                </div>
-                
-                <div class="form-group">
-                    <label for="username">
-                        <i class='bx bx-at'></i>
-                        Username
-                    </label>
-                    <input type="text" id="username" name="username" class="form-input" required placeholder="Nhập username">
-                </div>
-                
-                <div class="form-group">
-                    <label for="email">
-                        <i class='bx bx-envelope'></i>
-                        Email
-                    </label>
-                    <input type="email" id="email" name="email" class="form-input" required placeholder="Nhập email">
-                </div>
-                
-                <div id="passwordGroup" class="form-group">
-                    <label for="password">
-                        <i class='bx bx-lock'></i>
-                        Mật khẩu
-                    </label>
-                    <input type="password" id="password" name="password" class="form-input" required placeholder="Nhập mật khẩu">
-                </div>
-                
-                <div class="form-group">
-                    <label for="role">
-                        <i class='bx bx-shield'></i>
-                        Vai trò
-                    </label>
-                    <select id="role" name="role" class="form-input">
-                        <option value="user">User</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="isActive" name="isActive" class="checkbox-input" checked>
-                        <label for="isActive" class="checkbox-label">Tài khoản hoạt động</label>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="auth-btn login-btn">
-                        <i class='bx bx-x'></i>
-                        Hủy
-                    </button>
-                    <button type="submit" class="auth-btn signup-btn">
-                        <i class='bx bx-check'></i>
-                        Lưu
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+<div id="userModal" class="edit-profile-modal">
+	<div class="edit-profile-modal-content">
+		<div class="edit-profile-modal-header">
+			<h2 id="modalTitle">Chỉnh sửa thông tin User</h2>
+			<button class="edit-profile-modal-close" onclick="closeEditModal()">&times;</button>
+		</div>
+		
+		<form class="edit-profile-form" id="userForm" action="/admin/users" method="POST" enctype="multipart/form-data">
+			<div class="form-group">
+				<label for="first_name">
+					<i class='bx bx-user'></i>
+					Tên
+				</label>
+				<input type="text" id="firstName" name="firstName" class="form-input" required placeholder="Nhập tên">
+			</div>
+			
+			<div class="form-group">
+				<label for="last_name">
+					<i class='bx bx-user'></i>
+					Họ
+				</label>
+				<input type="text" id="lastName" name="lastName" class="form-input" required placeholder="Nhập họ">
+			</div>
+			
+			<div class="form-group">
+				<label for="username">
+					<i class='bx bx-at'></i>
+					Username
+				</label>
+				<input type="text" id="username" name="username" class="form-input" required placeholder="Nhập username">
+				<small class="form-note">Username phải là duy nhất</small>
+			</div>
+			
+			<div class="form-group">
+				<label for="email">
+					<i class='bx bx-envelope'></i>
+					Email
+				</label>
+				<input type="email" id="email" name="email" class="form-input" required placeholder="Nhập email">
+				<small class="form-note">Email phải là duy nhất</small>
+			</div>
+			
+			<div id="passwordGroup" class="form-group">
+				<label for="password">
+					<i class='bx bx-lock'></i>
+					Mật khẩu
+				</label>
+				<input type="password" id="password" name="password" class="form-input" placeholder="Nhập mật khẩu mới (để trống nếu không đổi)">
+				<small class="form-note">Để trống nếu không muốn thay đổi mật khẩu</small>
+			</div>
+
+			<div class="form-group full-width">
+				<label for="bio">
+					<i class='bx bx-text'></i>
+					Giới thiệu
+				</label>
+				<textarea id="bio" name="bio" rows="3" placeholder="Viết vài dòng về user này..."></textarea>
+			</div>
+			
+			<div class="form-section full-width">
+				<h3 class="section-subtitle">
+					<i class='bx bx-link'></i>
+					Liên kết mạng xã hội
+				</h3>
+				<div class="social-links-grid">
+					<div class="form-group">
+						<label for="github_url">
+							<i class='bx bxl-github'></i>
+							GitHub URL
+						</label>
+						<input type="url" id="github_url" name="github_url" placeholder="https://github.com/username">
+					</div>
+					
+					<div class="form-group">
+						<label for="linkedin_url">
+							<i class='bx bxl-linkedin'></i>
+							LinkedIn URL
+						</label>
+						<input type="url" id="linkedin_url" name="linkedin_url" placeholder="https://linkedin.com/in/username">
+					</div>
+					
+					<div class="form-group">
+						<label for="website_url">
+							<i class='bx bx-link'></i>
+							Website URL
+						</label>
+						<input type="url" id="website_url" name="website_url" placeholder="https://yourwebsite.com">
+					</div>
+					
+					<div class="form-group">
+						<label for="youtube_url">
+							<i class='bx bxl-youtube'></i>
+							YouTube URL
+						</label>
+						<input type="url" id="youtube_url" name="youtube_url" placeholder="https://youtube.com/channel/your-channel">
+					</div>
+					
+					<div class="form-group">
+						<label for="facebook_url">
+							<i class='bx bxl-facebook'></i>
+							Facebook URL
+						</label>
+						<input type="url" id="facebook_url" name="facebook_url" placeholder="https://facebook.com/your-profile">
+					</div>
+					
+					<div class="form-group">
+						<label for="instagram_url">
+							<i class='bx bxl-instagram'></i>
+							Instagram URL
+						</label>
+						<input type="url" id="instagram_url" name="instagram_url" placeholder="https://instagram.com/your-username">
+					</div>
+				</div>
+			</div>
+			
+			<div class="form-group full-width">
+				<label>
+					<i class='bx bx-camera'></i>
+					Ảnh đại diện
+				</label>
+				<div class="avatar-edit-section">
+					<div class="current-avatar">
+						<img src="/assets/default_avatar.png" alt="Current Avatar" id="currentAvatarPreview" class="current-avatar-image">
+					</div>
+					<div class="avatar-upload">
+						<label for="avatar" class="file-upload-label">
+							<i class='bx bx-camera'></i>
+							Thay đổi ảnh đại diện
+						</label>
+						<input type="file" id="avatar" name="avatar" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onchange="previewAvatarInEdit(this)">
+						<small class="file-info">Chấp nhận: JPG, PNG, GIF, WebP. Tối đa 2MB.</small>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section badges-section full-width">
+				<h3 class="section-subtitle">
+					<div>
+					    <i class='bx bx-badge'></i>
+    					Badges
+					</div>
+					<button type="button" class="badges-toggle-btn" id="badgesToggle">
+						<span class="toggle-text">Show more</span>
+						<i class='bx bx-chevron-down toggle-icon'></i>
+					</button>
+				</h3>
+				<div class="badges-grid" id="badgesGrid">
+					<?php
+					global $BADGES;
+					$badgeCount = 0;
+					$maxInitialBadges = 12;
+					
+					foreach ($BADGES as $badgeKey => $badgeData): 
+						$badgeCount++;
+						$isHidden = $badgeCount > $maxInitialBadges;
+						$hiddenClass = $isHidden ? 'badge-hidden' : '';
+					?>
+					<div class="badge-item selectable <?= $hiddenClass ?>" data-badge="<?= $badgeKey ?>">
+						<img src="/assets/<?= $badgeData['File'] ?>" alt="<?= $badgeData['title'] ?>" class="badge-icon" title="<?= $badgeData['description'] ?>">
+						<div class="badge-title"><?= $badgeData['title'] ?></div>
+					</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+			
+			<div class="admin-fields">
+				<div class="form-group">
+					<label for="role">
+						<i class='bx bx-shield'></i>
+						Vai trò
+					</label>
+					<select id="role" name="role" class="form-input">
+						<option value="user">User</option>
+						<option value="moderator">Moderator</option>
+						<option value="admin">Admin</option>
+					</select>
+				</div>
+				
+				<div class="form-group">
+					<label>
+						<i class='bx bx-check-circle'></i>
+						Trạng thái
+					</label>
+					<div class="checkbox-wrapper">
+						<input type="checkbox" id="isActive" name="isActive" checked>
+						<label for="isActive">Tài khoản hoạt động</label>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label for="rating">
+						<i class='bx bx-star'></i>
+						Rating
+					</label>
+					<input type="number" id="rating" name="rating" class="form-input" placeholder="Rating (-1 = chưa xếp hạng)" min="-1" value="-1">
+					<small class="form-note">-1 = chưa xếp hạng</small>
+				</div>
+			</div>
+			
+			<div class="form-actions">
+				<button type="button" class="auth-btn login-btn" onclick="closeEditModal()">
+					<i class='bx bx-x'></i>
+					Hủy
+				</button>
+				<button type="submit" class="auth-btn signup-btn">
+					<i class='bx bx-check'></i>
+					Lưu thay đổi
+				</button>
+			</div>
+		</form>
+	</div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="delete-modal">
-    <div class="delete-modal-content">
-        <div class="delete-modal-header">
-            <h3 class="delete-modal-title">Xác nhận xóa User</h3>
-            <button class="delete-modal-close">&times;</button>
+<div id="deleteModal" class="edit-profile-modal delete-modal">
+    <div class="edit-profile-modal-content delete-modal-content">
+        <div class="edit-profile-modal-header delete-modal-header">
+            <h2 id="deleteModalTitle">Xác nhận xóa User</h2>
+            <button class="edit-profile-modal-close delete-modal-close" onclick="closeDeleteModal()">&times;</button>
         </div>
         <div class="delete-modal-body">
             <div class="delete-warning">
-                <div class="delete-warning-icon">⚠️</div>
+                <div class="delete-warning-icon">
+                    <i class='bx bx-error-circle' style="font-size: 3rem; color: #000000ff;"></i>
+                </div>
                 <div class="delete-message">
-                    Bạn có chắc chắn muốn xóa user <span id="deleteUserName" class="delete-user-name"></span>?
+                    <h3>Bạn có chắc chắn muốn xóa user này?</h3>
+                    <p class="delete-user-info">
+                        <strong id="deleteUserName"></strong>
+                    </p>
                 </div>
                 <div class="delete-note">
-                    Hành động này không thể hoàn tác và sẽ xóa toàn bộ dữ liệu liên quan đến user này bao gồm:
-                    <br>• Tất cả bài nộp (submissions)
-                    <br>• Lịch sử giải bài
-                    <br>• Thảo luận và bình luận
+                    <p><strong>Cảnh báo:</strong> Hành động này không thể hoàn tác và sẽ xóa toàn bộ dữ liệu liên quan:</p>
+                    <ul>
+                        <li>Tất cả bài nộp (submissions)</li>
+                        <li>Lịch sử giải bài</li>
+                        <li>Thảo luận và bình luận</li>
+                        <li>Dữ liệu profile và thống kê</li>
+                    </ul>
                 </div>
             </div>
             <div class="delete-actions">
-                <button id="cancelDelete" class="delete-btn secondary">
+                <button id="cancelDelete" class="auth-btn secondary-btn">
                     <i class='bx bx-x'></i>
                     Hủy
                 </button>
-                <button id="confirmDelete" class="delete-btn danger">
+                <button id="confirmDelete" class="auth-btn danger-btn">
                     <i class='bx bx-trash'></i>
                     Xóa vĩnh viễn
                 </button>

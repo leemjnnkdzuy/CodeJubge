@@ -52,10 +52,10 @@ class UserModel
                 'username' => $userData['username'],
                 'email' => $userData['email'],
                 'password' => $hashedPassword,
-                'avatar' => $defaultAvatar,
-                'badges' => '[]',
-                'role' => 'user',
-                'is_active' => 1,
+                'avatar' => isset($userData['avatar']) ? $userData['avatar'] : $defaultAvatar,
+                'badges' => isset($userData['badges']) ? $userData['badges'] : '[]',
+                'role' => isset($userData['role']) ? $userData['role'] : 'user',
+                'is_active' => isset($userData['is_active']) ? $userData['is_active'] : 1,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -136,6 +136,24 @@ class UserModel
         }
     }
     
+    public function getUserByIdAdmin($userId): ?array
+    {
+        try {
+            // Admin có thể truy cập tất cả users kể cả bị vô hiệu hóa
+            $query = "SELECT * FROM {$this->table} WHERE id = :id";
+            $user = $this->db->selectOne($query, ['id' => $userId]);
+            
+            if ($user) {
+                return $this->sanitizeUserData($user);
+            }
+            
+            return null;
+            
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+    
     public function updateUser($userId, $userData): array
     {
         try {
@@ -156,9 +174,7 @@ class UserModel
                     'message' => 'Không có dữ liệu để cập nhật'
                 ];
             }
-            
-            // Username và Email không cho phép thay đổi - removed validation
-            
+                        
             $updateFields[] = "updated_at = :updated_at";
             $params['updated_at'] = date('Y-m-d H:i:s');
             
@@ -172,7 +188,6 @@ class UserModel
                     'message' => 'Cập nhật thông tin thành công'
                 ];
             } else {
-                // Check if user exists to distinguish between no changes and actual error
                 $userExists = $this->getUserById($userId);
                 if (!$userExists) {
                     return [
@@ -663,22 +678,55 @@ class UserModel
             return null;
         }
     }
+
+    public function getUserByUsernameAdmin($username)
+    {
+        try {
+            // Admin version - kiểm tra tất cả users kể cả bị vô hiệu hóa để tránh duplicate
+            $query = "SELECT * FROM {$this->table} WHERE username = :username";
+            $user = $this->db->selectOne($query, ['username' => $username]);
+            
+            if ($user) {
+                return $this->sanitizeUserData($user);
+            }
+            
+            return null;
+            
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+    
+    public function getUserByEmailAdmin($email)
+    {
+        try {
+            // Admin version - kiểm tra tất cả users kể cả bị vô hiệu hóa để tránh duplicate
+            $query = "SELECT * FROM {$this->table} WHERE email = :email";
+            $user = $this->db->selectOne($query, ['email' => $email]);
+            
+            if ($user) {
+                return $this->sanitizeUserData($user);
+            }
+            
+            return null;
+            
+        } catch (Exception $e) {
+            return null;
+        }
+    }
     
     public function deleteUser($userId)
     {
         try {
-            // First check if user exists
             $user = $this->getUserById($userId);
             if (!$user) {
                 return false;
             }
             
-            // Prevent deleting admin users
             if ($user['role'] === 'admin') {
                 return false;
             }
             
-            // Delete user
             $query = "DELETE FROM {$this->table} WHERE id = :id";
             return $this->db->delete($query, ['id' => $userId]);
             
@@ -691,7 +739,11 @@ class UserModel
     public function updateUserAdmin($userId, $userData)
     {
         try {
-            $allowedFields = ['first_name', 'last_name', 'username', 'email', 'role', 'is_active'];
+            $allowedFields = [
+                'first_name', 'last_name', 'username', 'email', 'role', 'is_active',
+                'bio', 'avatar', 'badges', 'rating', 
+                'github_url', 'linkedin_url', 'website_url', 'youtube_url', 'facebook_url', 'instagram_url'
+            ];
             $updateFields = [];
             $params = ['id' => $userId];
             

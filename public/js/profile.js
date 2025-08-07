@@ -165,68 +165,6 @@ function validateAvatarForm(form) {
     return true;
 }
 
-function showNotification(type, message) {
-    const existing = document.getElementById('popupNotification');
-    if (existing) {
-        existing.remove();
-    }
-    
-    const notification = document.createElement('div');
-    notification.id = 'popupNotification';
-    notification.className = `popup-notification ${type}`;
-    
-    let icon = '';
-    switch(type) {
-        case 'success':
-            icon = '<i class="bx bx-check-circle"></i>';
-            break;
-        case 'error':
-            icon = '<i class="bx bx-error-circle"></i>';
-            break;
-        case 'warning':
-            icon = '<i class="bx bx-error"></i>';
-            break;
-        default:
-            icon = '<i class="bx bx-info-circle"></i>';
-    }
-    
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">
-                ${icon}
-            </div>
-            <div class="notification-message">
-                ${message}
-            </div>
-            <button class="notification-close" onclick="closeNotification()">
-                <i class='bx bx-x'></i>
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-    
-    if (type !== 'info') {
-        setTimeout(() => {
-            closeNotification();
-        }, 5000);
-    }
-}
-
-function closeNotification() {
-    const notification = document.getElementById('popupNotification');
-    if (notification) {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }
-}
-
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
         e.target.style.display = 'none';

@@ -364,7 +364,7 @@ class DiscussionsManager {
     
     showNotification(message, type = 'info') {
         if (typeof showNotification === 'function') {
-            showNotification(message, type);
+            showNotification(type, message);
             return;
         }
         
