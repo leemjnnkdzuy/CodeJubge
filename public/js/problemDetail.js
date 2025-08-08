@@ -237,7 +237,6 @@ int main() {
         });
     }
     
-    // Handle popup cancel button
     const cancelSubmit = document.getElementById('cancelSubmit');
     if (cancelSubmit) {
         cancelSubmit.addEventListener('click', function() {
@@ -245,11 +244,9 @@ int main() {
         });
     }
     
-    // Handle popup confirm button
     const confirmSubmit = document.getElementById('confirmSubmit');
     if (confirmSubmit) {
         confirmSubmit.addEventListener('click', async function() {
-            // Hide popup
             document.getElementById('submitPopup').classList.remove('show');
             
             const code = editor ? editor.getValue() : '';
@@ -260,7 +257,6 @@ int main() {
                 return;
             }
             
-            // Show loading message
             const consoleOutput = document.getElementById('consoleOutput');
             consoleOutput.innerHTML = `
                 <div class="console-message" style="background: #fff3cd; color: #856404;">
@@ -296,7 +292,6 @@ int main() {
                             <div><strong>Memory usage:</strong> ${result.memory_usage}MB</div>
                     `;
                     
-                    // Add rating info if submission was accepted and rating was updated
                     if (result.status === 'Accepted' && result.user_rating !== undefined) {
                         const ratingGain = result.test_cases_passed; // Each test case = 1 point
                         submissionDetailsHtml += `
@@ -323,12 +318,10 @@ int main() {
                         ${submissionDetailsHtml}
                     `;
                     
-                    // Show celebration message if rating increased
                     if (result.status === 'Accepted' && result.user_rating !== undefined) {
                         showRatingCelebration(result.test_cases_passed, result.user_rating, result.user_rank);
                     }
                     
-                    // Reload submissions tab if accepted
                     if (result.status === 'Accepted') {
                         setTimeout(() => {
                             const submissionsTab = document.querySelector('.problem-tab[data-tab="submissions"]');
@@ -359,7 +352,6 @@ int main() {
         });
     }
     
-    // Clear console functionality
     const clearConsole = document.getElementById('clearConsole');
     if (clearConsole) {
         clearConsole.addEventListener('click', function() {
@@ -375,9 +367,7 @@ int main() {
         });
     }
     
-    // Rating celebration function
     function showRatingCelebration(ratingGain, newRating, rankInfo) {
-        // Create celebration popup
         const celebrationPopup = document.createElement('div');
         celebrationPopup.style.cssText = `
             position: fixed;
@@ -411,7 +401,6 @@ int main() {
             ` : ''}
         `;
         
-        // Add celebration styles if not already added
         if (!document.getElementById('celebration-styles')) {
             const style = document.createElement('style');
             style.id = 'celebration-styles';
