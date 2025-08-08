@@ -5,15 +5,18 @@ $routes = [
     'welcome' => 'pagesController@welcome',
     'home' => 'pagesController@home',
     'discussions' => 'pagesController@discussions',
+    'contests' => 'pagesController@contests',
     'api/discussions' => 'DiscussionController@api',
     'api/discussions/(\d+)/edit' => 'DiscussionController@getForEdit',
     'api/discussions/(\d+)' => 'DiscussionController@handleDiscussionById',
-    'api/discussions/(\d+)/user-interactions' => 'DiscussionController@getUserInteractions',
-    'api/discussions/like' => 'DiscussionController@like',
-    'api/discussions/bookmark' => 'DiscussionController@bookmark',
-    'api/discussions/replies' => 'DiscussionController@createReply',
+    'api/discussions/(\d+)/user-interactions' => 'ApiController@discussionUserInteractions',
+    'api/discussions/like' => 'ApiController@discussionLike',
+    'api/discussions/bookmark' => 'ApiController@discussionBookmark',
+    'api/discussions/replies' => 'ApiController@discussionReplies',
+    'api/discussions/replies/edit' => 'ApiController@discussionRepliesEdit',
+    'api/discussions/replies/delete' => 'ApiController@discussionRepliesDelete',
     'api/discussions/reply-like' => 'DiscussionController@likeReply',
-    'api/discussions/mark-solution' => 'DiscussionController@markSolution',
+    'api/discussions/mark-solution' => 'ApiController@discussionMarkSolution',
     'discussions/api' => 'DiscussionController@api',
     'discussions/like' => 'DiscussionController@like',
     'discussions/bookmark' => 'DiscussionController@bookmark',
@@ -35,7 +38,8 @@ $routes = [
     
     'submit' => 'SubmissionController@submit',
     'submissions' => 'SubmissionController@index',
-    'submissions/(\d+)' => 'SubmissionController@show',
+    'submissions/(\d+)' => 'SubmissionController@detail',
+    'api/submissions/(\d+)' => 'SubmissionController@detail',
     
     // Authentication routes
     'login' => 'pagesController@login',
@@ -57,6 +61,15 @@ $routes = [
     'leaderboard' => 'leaderboardController@index',
     'leaderboard/api' => 'leaderboardController@api',
     'user/([a-zA-Z0-9_]+)' => 'UserController@viewProfile',
+    
+    // Contest routes
+    'contests/api' => 'ContestController@api',
+    'contests/(\d+)' => 'ContestController@show',
+    'contests/(\d+)/leaderboard' => 'ContestController@leaderboard',
+    'api/contests' => 'ContestController@api',
+    'api/contests/create' => 'ContestController@create',
+    'api/contests/(\d+)/join' => 'ContestController@join',
+    'api/contests/(\d+)/leave' => 'ContestController@leave',
     
     // Admin routes
     'admin' => 'AdminController@index',

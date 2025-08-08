@@ -698,6 +698,141 @@ BEGIN
     END IF;
 END //
 
+-- Procedure toggle like reply
+CREATE PROCEDURE ToggleReplyLike(
+    IN p_user_id INT,
+    IN p_reply_id INT
+)
+BEGIN
+    DECLARE like_exists INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO like_exists
+    FROM discussion_likes
+    WHERE user_id = p_user_id AND reply_id = p_reply_id;
+    
+    IF like_exists > 0 THEN
+        DELETE FROM discussion_likes 
+        WHERE user_id = p_user_id AND reply_id = p_reply_id;
+        
+        UPDATE discussion_replies SET likes_count = likes_count - 1 WHERE id = p_reply_id;
+        SELECT 'unliked' as action;
+    ELSE
+        INSERT INTO discussion_likes (user_id, reply_id) 
+        VALUES (p_user_id, p_reply_id);
+        
+        UPDATE discussion_replies SET likes_count = likes_count + 1 WHERE id = p_reply_id;
+        SELECT 'liked' as action;
+    END IF;
+END //
+
+-- Procedure toggle bookmark thảo luận
+CREATE PROCEDURE ToggleDiscussionBookmark(
+    IN p_user_id INT,
+    IN p_discussion_id INT
+)
+BEGIN
+    DECLARE bookmark_exists INT DEFAULT 0;
+    
+    SELECT COUNT(*) INTO bookmark_exists
+    FROM discussion_bookmarks
+    WHERE user_id = p_user_id AND discussion_id = p_discussion_id;
+    
+    IF bookmark_exists > 0 THEN
+        DELETE FROM discussion_bookmarks 
+        WHERE user_id = p_user_id AND discussion_id = p_discussion_id;
+        SELECT 'unbookmarked' as action;
+    ELSE
+        INSERT INTO discussion_bookmarks (user_id, discussion_id) 
+        VALUES (p_user_id, p_discussion_id);
+        SELECT 'bookmarked' as action;
+    END IF;
+END //
+
+-- Procedure đánh dấu solution cho reply
+CREATE PROCEDURE MarkReplyAsSolution(
+    IN p_reply_id INT,
+    IN p_discussion_id INT,
+    IN p_user_id INT
+)
+BEGIN
+    DECLARE is_author INT DEFAULT 0;
+    DECLARE current_solution_id INT DEFAULT NULL;
+    
+    -- Kiểm tra quyền (chỉ tác giả discussion mới được đánh dấu solution)
+    SELECT COUNT(*) INTO is_author
+    FROM discussions 
+    WHERE id = p_discussion_id AND author_id = p_user_id;
+    
+    IF is_author = 0 THEN
+        SELECT 'error' as status, 'Bạn không có quyền đánh dấu solution cho thảo luận này!' as message;
+    ELSE
+        -- Kiểm tra xem có solution hiện tại không
+        SELECT id INTO current_solution_id
+        FROM discussion_replies 
+        WHERE discussion_id = p_discussion_id AND is_solution = TRUE
+        LIMIT 1;
+        
+        IF current_solution_id IS NOT NULL THEN
+            -- Bỏ đánh dấu solution hiện tại
+            UPDATE discussion_replies SET is_solution = FALSE WHERE id = current_solution_id;
+        END IF;
+        
+        -- Đánh dấu reply mới là solution
+        UPDATE discussion_replies SET is_solution = TRUE WHERE id = p_reply_id;
+        UPDATE discussions SET is_solved = TRUE WHERE id = p_discussion_id;
+        
+        SELECT 'success' as status, 'Đã đánh dấu làm giải pháp!' as message;
+    END IF;
+END //
+
+-- Procedure cập nhật reply content
+CREATE PROCEDURE UpdateDiscussionReply(
+    IN p_reply_id INT,
+    IN p_content TEXT,
+    IN p_user_id INT
+)
+BEGIN
+    DECLARE is_author INT DEFAULT 0;
+    
+    -- Kiểm tra quyền (chỉ tác giả reply mới được sửa)
+    SELECT COUNT(*) INTO is_author
+    FROM discussion_replies 
+    WHERE id = p_reply_id AND author_id = p_user_id;
+    
+    IF is_author = 0 THEN
+        SELECT 'error' as status, 'Bạn không có quyền sửa phản hồi này!' as message;
+    ELSE
+        UPDATE discussion_replies 
+        SET content = p_content, updated_at = NOW()
+        WHERE id = p_reply_id;
+        
+        SELECT 'success' as status, 'Cập nhật phản hồi thành công!' as message;
+    END IF;
+END //
+
+-- Procedure xóa reply
+CREATE PROCEDURE DeleteDiscussionReply(
+    IN p_reply_id INT,
+    IN p_user_id INT
+)
+BEGIN
+    DECLARE is_author INT DEFAULT 0;
+    DECLARE p_discussion_id INT;
+    
+    -- Lấy discussion_id và kiểm tra quyền
+    SELECT discussion_id INTO p_discussion_id
+    FROM discussion_replies 
+    WHERE id = p_reply_id AND author_id = p_user_id;
+    
+    IF p_discussion_id IS NULL THEN
+        SELECT 'error' as status, 'Bạn không có quyền xóa phản hồi này!' as message;
+    ELSE
+        DELETE FROM discussion_replies WHERE id = p_reply_id;
+        
+        SELECT 'success' as status, 'Xóa phản hồi thành công!' as message;
+    END IF;
+END //
+
 DELIMITER ;
 
 -- ==================================================
@@ -893,3 +1028,191 @@ CREATE INDEX idx_discussions_category_created ON discussions(category, created_a
 CREATE INDEX idx_discussions_pinned_created ON discussions(is_pinned DESC, created_at DESC);
 CREATE INDEX idx_discussions_popularity ON discussions(likes_count DESC, replies_count DESC);
 CREATE INDEX idx_discussion_replies_discussion_created ON discussion_replies(discussion_id, created_at DESC);
+
+-- ==================================================
+-- BẢNG CONTESTS - Quản lý cuộc thi
+-- ==================================================
+CREATE TABLE `contests` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(255) NOT NULL,
+    `description` TEXT,
+    `start_time` DATETIME NOT NULL,
+    `end_time` DATETIME NOT NULL,
+    `created_by` INT NOT NULL,
+    `max_participants` INT DEFAULT NULL,
+    `is_public` BOOLEAN DEFAULT TRUE,
+    `status` ENUM('upcoming', 'live', 'finished') DEFAULT 'upcoming',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    INDEX `idx_status` (`status`),
+    INDEX `idx_start_time` (`start_time`),
+    INDEX `idx_end_time` (`end_time`),
+    INDEX `idx_created_by` (`created_by`),
+    INDEX `idx_status_time` (`status`, `start_time`, `end_time`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG CONTEST_PARTICIPANTS - Người tham gia cuộc thi
+-- ==================================================
+CREATE TABLE `contest_participants` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `contest_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `joined_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `total_score` INT DEFAULT 0,
+    `total_time` INT DEFAULT 0, -- thời gian tính bằng giây
+    `problems_solved` INT DEFAULT 0,
+    `rank_position` INT DEFAULT NULL,
+    
+    FOREIGN KEY (`contest_id`) REFERENCES `contests`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_participant` (`contest_id`, `user_id`),
+    INDEX `idx_contest_id` (`contest_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_score` (`total_score` DESC),
+    INDEX `idx_rank` (`rank_position`),
+    INDEX `idx_ranking` (`contest_id`, `total_score` DESC, `total_time` ASC)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG CONTEST_PROBLEMS - Bài tập trong cuộc thi
+-- ==================================================
+CREATE TABLE `contest_problems` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `contest_id` INT NOT NULL,
+    `problem_id` INT NOT NULL,
+    `order_number` INT NOT NULL DEFAULT 1,
+    `points` INT DEFAULT 100,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (`contest_id`) REFERENCES `contests`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`problem_id`) REFERENCES `problems`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_contest_problem` (`contest_id`, `problem_id`),
+    INDEX `idx_contest_id` (`contest_id`),
+    INDEX `idx_problem_id` (`problem_id`),
+    INDEX `idx_order` (`order_number`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- BẢNG CONTEST_SUBMISSIONS - Bài nộp trong cuộc thi
+-- ==================================================
+CREATE TABLE `contest_submissions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `contest_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `problem_id` INT NOT NULL,
+    `submission_id` INT NOT NULL,
+    `points_earned` INT DEFAULT 0,
+    `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (`contest_id`) REFERENCES `contests`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`problem_id`) REFERENCES `problems`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`submission_id`) REFERENCES `submissions`(`id`) ON DELETE CASCADE,
+    INDEX `idx_contest_id` (`contest_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_problem_id` (`problem_id`),
+    INDEX `idx_submission_id` (`submission_id`),
+    INDEX `idx_submitted_at` (`submitted_at`),
+    INDEX `idx_user_contest` (`user_id`, `contest_id`, `submitted_at`)
+) ENGINE=InnoDB;
+
+-- ==================================================
+-- DỮ LIỆU MẪU CHO CONTESTS
+-- ==================================================
+
+-- Thêm cuộc thi mẫu
+INSERT INTO `contests` (`title`, `description`, `start_time`, `end_time`, `created_by`, `max_participants`, `is_public`) VALUES
+('Cuộc thi Thuật toán Cơ bản', 'Cuộc thi dành cho người mới bắt đầu với các bài toán cơ bản về thuật toán và cấu trúc dữ liệu.', 
+ DATE_ADD(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 2 DAY), 1, 100, TRUE),
+ 
+('Contest Lập trình Nâng cao', 'Thử thách bản thân với các bài toán phức tạp và thuật toán nâng cao.', 
+ DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 8 DAY), 1, 50, TRUE),
+ 
+('Cuộc thi Hàng tuần #1', 'Cuộc thi hàng tuần với các bài toán đa dạng từ dễ đến khó.', 
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 6 DAY), 1, NULL, TRUE);
+
+-- Thêm bài tập vào cuộc thi (giả sử đã có problems với id 1, 2, 3, 4, 5)
+INSERT IGNORE INTO `contest_problems` (`contest_id`, `problem_id`, `order_number`, `points`) VALUES
+(1, 1, 1, 100),
+(1, 2, 2, 200),
+(1, 3, 3, 300),
+(2, 1, 1, 150),
+(2, 2, 2, 250),
+(2, 3, 3, 350),
+(2, 4, 4, 400),
+(3, 1, 1, 100),
+(3, 2, 2, 150),
+(3, 3, 3, 200);
+
+-- ==================================================
+-- STORED PROCEDURES CHO CONTESTS
+-- ==================================================
+
+DELIMITER $$
+
+-- Procedure cập nhật xếp hạng cuộc thi
+CREATE PROCEDURE `UpdateContestRankings`(IN contest_id_param INT)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+    
+    START TRANSACTION;
+    
+    -- Reset tất cả xếp hạng cho cuộc thi này
+    UPDATE `contest_participants` 
+    SET `rank_position` = NULL 
+    WHERE `contest_id` = contest_id_param;
+    
+    -- Cập nhật xếp hạng dựa trên điểm số (giảm dần) và thời gian (tăng dần)
+    SET @rank = 0;
+    UPDATE `contest_participants` cp1
+    JOIN (
+        SELECT `user_id`, 
+               @rank := @rank + 1 as new_rank
+        FROM `contest_participants` cp2
+        WHERE cp2.`contest_id` = contest_id_param
+        ORDER BY cp2.`total_score` DESC, cp2.`total_time` ASC
+    ) ranked ON cp1.`user_id` = ranked.`user_id`
+    SET cp1.`rank_position` = ranked.new_rank
+    WHERE cp1.`contest_id` = contest_id_param;
+    
+    COMMIT;
+END$$
+
+DELIMITER ;
+
+-- ==================================================
+-- TRIGGERS CHO CONTESTS
+-- ==================================================
+
+DELIMITER $$
+
+-- Trigger tự động cập nhật trạng thái cuộc thi
+CREATE TRIGGER `update_contest_status`
+BEFORE UPDATE ON `contests`
+FOR EACH ROW
+BEGIN
+    SET NEW.`status` = CASE 
+        WHEN NOW() < NEW.`start_time` THEN 'upcoming'
+        WHEN NOW() BETWEEN NEW.`start_time` AND NEW.`end_time` THEN 'live'
+        WHEN NOW() > NEW.`end_time` THEN 'finished'
+        ELSE 'upcoming'
+    END;
+END$$
+
+DELIMITER ;
+
+-- Cập nhật trạng thái cuộc thi dựa trên thời gian hiện tại
+UPDATE `contests` 
+SET `status` = CASE 
+    WHEN NOW() < `start_time` THEN 'upcoming'
+    WHEN NOW() BETWEEN `start_time` AND `end_time` THEN 'live'
+    WHEN NOW() > `end_time` THEN 'finished'
+    ELSE 'upcoming'
+END;

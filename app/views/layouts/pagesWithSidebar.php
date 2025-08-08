@@ -27,6 +27,8 @@
         echo ' <link rel="stylesheet" href="/css/leaderboardStyle.css">';
     } elseif (strpos($_SERVER['REQUEST_URI'], '/submissions') === 0) {
         echo '<link rel="stylesheet" href="/css/submissionsStyle.css">';
+    } elseif (strpos($_SERVER['REQUEST_URI'], '/contests') === 0) {
+        echo '<link rel="stylesheet" href="/css/contestsStyle.css">';
     } 
     else {
         echo '<link rel="stylesheet" href="/css/homeStyle.css">';
@@ -74,21 +76,26 @@
 
     <?php include VIEW_PATH . '/components/popupNotification.php'; ?>
 
-    <script src="js/sidebar.js"></script>
+    <script src="/js/sidebar.js"></script>
     <?php if (strpos($_SERVER['REQUEST_URI'], '/leaderboard') === 0): ?>
-        <script src="js/leaderboard.js"></script>
+        <script src="/js/leaderboard.js"></script>
+    <?php endif; ?>
+    <?php if (strpos($_SERVER['REQUEST_URI'], '/contests') === 0): ?>
+        <script src="/js/contests.js"></script>
     <?php endif; ?>
     <script>
         function checkScreenSize() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             
-            if (window.innerWidth <= 768) {
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('sidebar-collapsed');
-            } else {
-                sidebar.classList.remove('collapsed');
-                mainContent.classList.remove('sidebar-collapsed');
+            if (sidebar && mainContent) {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('sidebar-collapsed');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    mainContent.classList.remove('sidebar-collapsed');
+                }
             }
         }
         
@@ -122,5 +129,5 @@
             }
         }
     </script>
-</body>
+    </body>
 </html>

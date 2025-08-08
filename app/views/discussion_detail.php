@@ -180,9 +180,27 @@ $content = ob_start();
                             
                             <?php if ($userId && ($userId == $reply['author_id'] || $userId == $discussion['author_id'] || $userRole === 'admin' || $userRole === 'moderator')): ?>
                                 <div class="reply-actions-menu">
-                                    <button class="reply-menu-btn" onclick="toggleReplyMenu(<?= $reply['id'] ?>)">
+                                    <button class="reply-menu-btn" onclick="event.stopPropagation(); toggleReplyMenu(<?= $reply['id'] ?>)">
                                         <i class='bx bx-dots-horizontal-rounded'></i>
                                     </button>
+                                    <div class="reply-actions-menu-options" id="replyMenu_<?= $reply['id'] ?>">
+                                        <?php if ($userId == $reply['author_id'] || $userRole === 'admin' || $userRole === 'moderator'): ?>
+                                            <button class="reply-dropdown-item edit" onclick="event.stopPropagation(); editReply(<?= $reply['id'] ?>)">
+                                                <i class='bx bx-edit'></i>
+                                                Chỉnh sửa
+                                            </button>
+                                            <button class="reply-dropdown-item delete" onclick="event.stopPropagation(); deleteReply(<?= $reply['id'] ?>)">
+                                                <i class='bx bx-trash'></i>
+                                                Xóa
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if ($userId == $discussion['author_id'] && !$reply['is_solution'] && $userId != $reply['author_id']): ?>
+                                            <button class="reply-dropdown-item mark-solution" onclick="event.stopPropagation(); markAsSolution(<?= $reply['id'] ?>)">
+                                                <i class='bx bx-check-circle'></i>
+                                                Đánh dấu giải pháp
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -217,6 +235,56 @@ $content = ob_start();
     </div>
 </div>
 
+<!-- Modal xác nhận xóa reply -->
+<div id="deleteReplyConfirmModal" class="modal-confirm-delete">
+    <div class="modal">
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn xóa phản hồi này không?</p>
+            <div class="warning-text">
+                <i class="bx bx-error"></i>
+                <span>Hành động này không thể hoàn tác!</span>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="cancelDeleteReply" class="confirm-delete-cancel-btn">
+                Hủy bỏ
+            </button>
+            <button id="confirmDeleteReply" class="confirm-delete-accept-btn">
+                Xóa phản hồi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chỉnh sửa reply -->
+<div id="editReplyModal" class="discussions-modal">
+    <div class="discussions-modal-content">
+        <div class="discussions-modal-header">
+            <h2><i class="bx bx-edit"></i> Chỉnh Sửa Phản Hồi</h2>
+            <button type="button" class="discussions-modal-close" onclick="closeEditReplyModal()">
+                <i class="bx bx-x"></i>
+            </button>
+        </div>
+        
+        <form id="editReplyForm" class="discussions-form">
+            <input type="hidden" id="editReplyId" name="reply_id" value="">
+            
+            <div class="discussions-form-group full-width">
+                <label for="editReplyContent">Nội dung phản hồi *</label>
+                <textarea id="editReplyContent" name="content" required placeholder="Nhập nội dung phản hồi..." rows="6"></textarea>
+                <span class="discussions-form-note">Mô tả chi tiết phản hồi của bạn</span>
+            </div>
+            
+            <div class="discussions-form-actions">
+                <button type="button" class="discussions-btn-cancel" onclick="closeEditReplyModal()">Hủy</button>
+                <button type="submit" class="discussions-btn-submit">
+                    <i class="bx bx-save"></i> Cập Nhật
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const DISCUSSION_ID = <?= $discussion['id'] ?>;
 const USER_ID = <?= $userId ? $userId : 'null' ?>;
@@ -234,13 +302,13 @@ document.getElementById('replyFormSubmit')?.addEventListener('submit', async fun
     e.preventDefault();
     
     if (!USER_ID) {
-        alert('Bạn cần đăng nhập để trả lời!');
+        showNotification('Bạn cần đăng nhập để trả lời!', 'error');
         return;
     }
     
     const content = document.getElementById('replyContent').value.trim();
     if (!content) {
-        alert('Vui lòng nhập nội dung phản hồi!');
+        showNotification('Vui lòng nhập nội dung phản hồi!', 'error');
         return;
     }
     
@@ -266,11 +334,11 @@ document.getElementById('replyFormSubmit')?.addEventListener('submit', async fun
         if (result.success) {
             window.location.reload();
         } else {
-            alert(result.message || 'Có lỗi xảy ra khi gửi phản hồi!');
+            showNotification(result.message || 'Có lỗi xảy ra khi gửi phản hồi!', 'error');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Có lỗi xảy ra khi gửi phản hồi!');
+        showNotification('Có lỗi xảy ra khi gửi phản hồi!', 'error');
     } finally {
         const submitBtn = this.querySelector('.btn-submit');
         submitBtn.textContent = 'Gửi phản hồi';
@@ -280,7 +348,7 @@ document.getElementById('replyFormSubmit')?.addEventListener('submit', async fun
 
 document.querySelector('.like-btn')?.addEventListener('click', async function() {
     if (!USER_ID) {
-        alert('Bạn cần đăng nhập để thích bài viết!');
+        showNotification('Bạn cần đăng nhập để thích bài viết!', 'error');
         return;
     }
     
@@ -318,7 +386,7 @@ document.querySelector('.like-btn')?.addEventListener('click', async function() 
 
 document.querySelector('.bookmark-btn')?.addEventListener('click', async function() {
     if (!USER_ID) {
-        alert('Bạn cần đăng nhập để lưu bài viết!');
+        showNotification('Bạn cần đăng nhập để lưu bài viết!', 'error');
         return;
     }
     
@@ -352,7 +420,7 @@ document.querySelector('.bookmark-btn')?.addEventListener('click', async functio
 document.querySelectorAll('.reply-like-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
         if (!USER_ID) {
-            alert('Bạn cần đăng nhập để thích phản hồi!');
+            showNotification('Bạn cần đăng nhập để thích phản hồi!', 'error');
             return;
         }
         
@@ -412,11 +480,11 @@ document.querySelectorAll('.mark-solution-btn').forEach(btn => {
                 if (result.success) {
                     window.location.reload();
                 } else {
-                    alert(result.message || 'Có lỗi xảy ra!');
+                    showNotification(result.message || 'Có lỗi xảy ra!', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Có lỗi xảy ra!');
+                showNotification('Có lỗi xảy ra!', 'error');
             }
         }
     });
@@ -431,7 +499,7 @@ function shareDiscussion() {
         });
     } else {
         navigator.clipboard.writeText(window.location.href).then(() => {
-            alert('Đã sao chép liên kết vào clipboard!');
+            showNotification('Đã sao chép liên kết vào clipboard!', 'success');
         }).catch(() => {
             const textArea = document.createElement('textarea');
             textArea.value = window.location.href;
@@ -439,14 +507,343 @@ function shareDiscussion() {
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            alert('Đã sao chép liên kết vào clipboard!');
+            showNotification('Đã sao chép liên kết vào clipboard!', 'success');
         });
     }
 }
 
 function toggleReplyMenu(replyId) {
-    console.log('Toggle menu for reply:', replyId);
+    const menu = document.getElementById(`replyMenu_${replyId}`);
+    const allMenus = document.querySelectorAll('.reply-actions-menu-options');
+    
+    // Close all other menus
+    allMenus.forEach(m => {
+        if (m !== menu) {
+            m.classList.remove('show');
+        }
+    });
+    
+    // Toggle current menu
+    if (menu) {
+        menu.classList.toggle('show');
+    }
 }
+
+function editReply(replyId) {
+    // Close menu
+    const menu = document.getElementById(`replyMenu_${replyId}`);
+    if (menu) menu.classList.remove('show');
+    
+    // Get reply content
+    const replyElement = document.querySelector(`[data-reply-id="${replyId}"]`);
+    if (replyElement) {
+        const replyContentElement = replyElement.querySelector('.reply-content');
+        // Get the raw content without HTML tags, then replace <br> with newlines
+        const replyContent = replyContentElement.innerHTML
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]*>/g, '')
+            .trim();
+        
+        // Set values in modal
+        document.getElementById('editReplyId').value = replyId;
+        document.getElementById('editReplyContent').value = replyContent;
+        
+        // Store original content for comparison
+        document.getElementById('editReplyModal').setAttribute('data-original-content', replyContent);
+        
+        // Show modal
+        document.getElementById('editReplyModal').classList.add('show');
+        
+        // Focus on textarea
+        setTimeout(() => {
+            document.getElementById('editReplyContent').focus();
+            updateSubmitButton();
+        }, 100);
+    }
+}
+
+function deleteReply(replyId) {
+    // Close menu
+    const menu = document.getElementById(`replyMenu_${replyId}`);
+    if (menu) menu.classList.remove('show');
+    
+    // Show delete confirmation modal
+    const deleteModal = document.getElementById('deleteReplyConfirmModal');
+    deleteModal.style.display = 'flex';
+    
+    // Store reply ID for confirmation
+    window.pendingDeleteReplyId = replyId;
+}
+
+function markAsSolution(replyId) {
+    // Close menu
+    const menu = document.getElementById(`replyMenu_${replyId}`);
+    if (menu) menu.classList.remove('show');
+    
+    if (confirm('Bạn có chắc chắn muốn đánh dấu phản hồi này là giải pháp không?')) {
+        fetch('/api/discussions/mark-solution', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reply_id: replyId,
+                discussion_id: DISCUSSION_ID
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                window.location.reload();
+            } else {
+                showNotification(result.message || 'Có lỗi xảy ra!', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Có lỗi xảy ra khi đánh dấu giải pháp!', 'error');
+        });
+    }
+}
+
+// Modal functions
+function closeEditReplyModal() {
+    document.getElementById('editReplyModal').classList.remove('show');
+    document.getElementById('editReplyForm').reset();
+    document.getElementById('editReplyId').value = '';
+    document.getElementById('editReplyModal').removeAttribute('data-original-content');
+}
+
+function updateSubmitButton() {
+    const modal = document.getElementById('editReplyModal');
+    const originalContent = modal.getAttribute('data-original-content') || '';
+    const currentContent = document.getElementById('editReplyContent').value.trim();
+    const submitBtn = document.querySelector('#editReplyForm .discussions-btn-submit');
+    
+    if (originalContent === currentContent) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    }
+}
+
+function showNotification(type, message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = 'popupNotification';
+    notification.className = `popup-notification ${type}`;
+    notification.style.display = 'block';
+    
+    const iconMap = {
+        'success': 'bx-check-circle',
+        'error': 'bx-error-circle',
+        'warning': 'bx-error',
+        'info': 'bx-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">
+                <i class="bx ${iconMap[type] || iconMap['info']}"></i>
+            </div>
+            <div class="notification-message">
+                ${message}
+            </div>
+            <button class="notification-close" onclick="closeNotification()">
+                <i class="bx bx-x"></i>
+            </button>
+        </div>
+    `;
+    
+    // Remove existing notification if any
+    const existingNotification = document.getElementById('popupNotification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Add to body
+    document.body.appendChild(notification);
+    
+    // Show notification with animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto hide after 5 seconds for success/info, keep error/warning until manually closed
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            if (notification && notification.parentNode) {
+                closeNotification();
+            }
+        }, 5000);
+    }
+}
+
+function closeNotification() {
+    const notification = document.getElementById('popupNotification');
+    if (notification) {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }
+}
+
+// Add event listener for content changes
+document.addEventListener('DOMContentLoaded', function() {
+    const editReplyContent = document.getElementById('editReplyContent');
+    if (editReplyContent) {
+        editReplyContent.addEventListener('input', updateSubmitButton);
+    }
+});
+
+// Handle edit reply form submission
+document.getElementById('editReplyForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!USER_ID) {
+        showNotification('error', 'Bạn cần đăng nhập để chỉnh sửa phản hồi!');
+        return;
+    }
+    
+    const modal = document.getElementById('editReplyModal');
+    const originalContent = modal.getAttribute('data-original-content') || '';
+    const replyId = document.getElementById('editReplyId').value;
+    const content = document.getElementById('editReplyContent').value.trim();
+    
+    if (!content) {
+        showNotification('warning', 'Vui lòng nhập nội dung phản hồi!');
+        return;
+    }
+    
+    // Check if content has changed
+    if (originalContent === content) {
+        showNotification('info', 'Nội dung không có thay đổi nào!');
+        return;
+    }
+    
+    try {
+        const submitBtn = this.querySelector('.discussions-btn-submit');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Đang cập nhật...';
+        submitBtn.disabled = true;
+        
+        const response = await fetch('/api/discussions/replies/edit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reply_id: replyId,
+                content: content
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update reply content in DOM
+            const replyElement = document.querySelector(`[data-reply-id="${replyId}"]`);
+            if (replyElement) {
+                const contentElement = replyElement.querySelector('.reply-content');
+                contentElement.innerHTML = content.replace(/\n/g, '<br>');
+            }
+            
+            closeEditReplyModal();
+            showNotification('success', 'Phản hồi đã được cập nhật thành công!');
+        } else {
+            showNotification('error', result.message || 'Có lỗi xảy ra khi cập nhật phản hồi!');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Có lỗi xảy ra khi cập nhật phản hồi!');
+    } finally {
+        const submitBtn = this.querySelector('.discussions-btn-submit');
+        submitBtn.textContent = 'Cập Nhật';
+        submitBtn.disabled = false;
+    }
+});
+
+// Handle delete confirmation modal
+document.getElementById('cancelDeleteReply')?.addEventListener('click', function() {
+    const deleteModal = document.getElementById('deleteReplyConfirmModal');
+    deleteModal.style.display = 'none';
+    window.pendingDeleteReplyId = null;
+});
+
+document.getElementById('confirmDeleteReply')?.addEventListener('click', async function() {
+    const replyId = window.pendingDeleteReplyId;
+    if (!replyId) return;
+    
+    try {
+        const response = await fetch('/api/discussions/replies/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reply_id: replyId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Remove reply from DOM
+            const replyElement = document.querySelector(`[data-reply-id="${replyId}"]`);
+            if (replyElement) {
+                replyElement.remove();
+            }
+            // Update reply count
+            const replyCountSpan = document.querySelector('.replies-header h2');
+            if (replyCountSpan) {
+                const currentCount = parseInt(replyCountSpan.textContent.match(/\d+/)[0]);
+                replyCountSpan.textContent = `Phản hồi (${currentCount - 1})`;
+            }
+            showNotification('success', 'Phản hồi đã được xóa thành công!');
+        } else {
+            showNotification('error', result.message || 'Có lỗi xảy ra khi xóa phản hồi!');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'Có lỗi xảy ra khi xóa phản hồi!');
+    } finally {
+        // Close modal
+        const deleteModal = document.getElementById('deleteReplyConfirmModal');
+        deleteModal.style.display = 'none';
+        window.pendingDeleteReplyId = null;
+    }
+});
+
+// Close modals when clicking outside
+document.addEventListener('click', function(e) {
+    // Close edit modal when clicking outside
+    if (e.target.id === 'editReplyModal') {
+        closeEditReplyModal();
+    }
+    
+    // Close delete modal when clicking outside
+    if (e.target.id === 'deleteReplyConfirmModal') {
+        const deleteModal = document.getElementById('deleteReplyConfirmModal');
+        deleteModal.style.display = 'none';
+        window.pendingDeleteReplyId = null;
+    }
+});
+
+// Close menus when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.reply-actions-menu')) {
+        document.querySelectorAll('.reply-actions-menu-options').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
 
 document.addEventListener('DOMContentLoaded', async function() {
     if (USER_ID) {

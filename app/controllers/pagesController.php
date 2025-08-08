@@ -249,5 +249,10 @@ class pagesController extends Controller
     {
         include VIEW_PATH . '/discussions.php';
     }
+    
+    public function contests()
+    {
+        include VIEW_PATH . '/contests.php';
+    }
 }
 ?>

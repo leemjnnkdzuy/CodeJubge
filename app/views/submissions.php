@@ -70,7 +70,6 @@ ob_start();
         </form>
     </div>
 
-    <!-- Submissions List -->
     <div class="submissions-content">
         <?php if (isset($error)): ?>
         <div class="error-message">
@@ -172,9 +171,9 @@ ob_start();
                             </div>
                         </td>
                         <td class="submission-actions">
-                            <a href="/submissions/<?= $submission['id'] ?>" class="btn-action btn-view" title="Xem chi tiết">
+                            <button class="btn-action btn-view" data-submission-id="<?= $submission['id'] ?>" title="Xem chi tiết">
                                 <i class='bx bx-show'></i>
-                            </a>
+                            </button>
                             <a href="/problems/<?= htmlspecialchars($submission['problem_slug']) ?>" class="btn-action btn-retry" title="Thử lại">
                                 <i class='bx bx-redo'></i>
                             </a>
@@ -185,7 +184,6 @@ ob_start();
             </table>
         </div>
 
-        <!-- Pagination -->
         <?php if ($totalPages > 1): ?>
         <div class="pagination-container">
             <div class="pagination">
@@ -218,8 +216,10 @@ ob_start();
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<script src="/js/submissions.js"></script>
+
 <?php
 $content = ob_get_clean();
 include VIEW_PATH . '/layouts/pagesWithSidebar.php';
-?>
 ?>

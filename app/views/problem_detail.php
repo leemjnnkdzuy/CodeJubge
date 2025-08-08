@@ -54,10 +54,6 @@ ob_start();
         <div class="problem-content">
             <div class="tab-content active" id="description-tab">
                 <div class="problem-header">
-                    <a href="/home" class="back-button">
-                        <i class="bx bx-arrow-back"></i>
-                        <span>Trở về</span>
-                    </a>
                     <h1 class="problem-title"><?= htmlspecialchars($problem['title']) ?></h1>
                     
                     <div class="problem-meta">
@@ -187,131 +183,139 @@ ob_start();
             </div>
             
             <div class="tab-content" id="submissions-tab">
-                <?php if (!empty($userSubmissions)): ?>
-                <div class="problem-section">
-                    <h2 class="section-title">
-                        <i class="bx bx-history"></i>
-                        Lịch sử nộp bài của bạn (<?= count($userSubmissions) ?> submissions)
-                    </h2>
-                    <div class="submissions-container">
-                        <?php foreach ($userSubmissions as $submission): ?>
-                        <div class="submission-item status-<?= strtolower(str_replace([' ', '_'], ['_', '_'], $submission['status'])) ?>">
-                            <div class="submission-header">
-                                <div class="submission-status">
-                                    <?php 
-                                    $statusClass = $submission['status'] === 'Accepted' ? 'passed' : 'failed';
-                                    $statusIcon = $submission['status'] === 'Accepted' ? 'bx-check-circle' : 'bx-x-circle';
-                                    ?>
-                                    <div class="status-icon status-<?= $statusClass ?>">
-                                        <i class="bx <?= $statusIcon ?>"></i>
+                <div class="submissions-global-header">
+                    <div class="submissions-toggle">
+                        <button class="btn btn-outline btn-sm single-toggle-btn" id="submissionsToggle" data-current="my-submissions">
+                            <span id="toggleText">
+                                <i class="bx bx-user"></i>
+                                Bài nộp của bạn
+                            </span>
+                            <i class="bx bx-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="submissions-view-container">
+                    <div class="problem-section submissions-view" id="my-submissions-view">
+                        <?php if (!empty($userSubmissions)): ?>
+                        <div class="submissions-container">
+                            <?php foreach ($userSubmissions as $submission): ?>
+                            <div class="submission-item status-<?= strtolower(str_replace([' ', '_'], ['_', '_'], $submission['status'])) ?>">
+                                <div class="submission-header">
+                                    <div class="submission-status">
+                                        <?php 
+                                        $statusClass = $submission['status'] === 'Accepted' ? 'passed' : 'failed';
+                                        $statusIcon = $submission['status'] === 'Accepted' ? 'bx-check-circle' : 'bx-x-circle';
+                                        ?>
+                                        <div class="status-icon status-<?= $statusClass ?>">
+                                            <i class="bx <?= $statusIcon ?>"></i>
+                                        </div>
+                                        <span class="status-text"><?= htmlspecialchars($submission['status']) ?></span>
                                     </div>
-                                    <span class="status-text"><?= htmlspecialchars($submission['status']) ?></span>
-                                </div>
-                                <div class="submission-meta">
-                                    <span class="submission-time">
-                                        <i class="bx bx-time"></i> 
-                                        <?= date('d/m/Y H:i:s', strtotime($submission['created_at'])) ?>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="submission-details">
-                                <div class="detail-item">
-                                    <span class="detail-label">Ngôn ngữ:</span>
-                                    <span class="detail-value language-<?= strtolower($submission['language']) ?>">
-                                        <?= htmlspecialchars($submission['language']) ?>
-                                    </span>
-                                </div>
-                                <?php if (isset($submission['test_cases_passed']) && isset($submission['total_test_cases'])): ?>
-                                <div class="detail-item">
-                                    <span class="detail-label">Test cases:</span>
-                                    <span class="detail-value">
-                                        <?= $submission['test_cases_passed'] ?>/<?= $submission['total_test_cases'] ?>
-                                    </span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if ($submission['status'] === 'Accepted' && ($submission['execution_time'] > 0 || $submission['memory_usage'] > 0)): ?>
-                                <div class="detail-item">
-                                    <span class="detail-label">Thời gian:</span>
-                                    <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Bộ nhớ:</span>
-                                    <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($submission['error_message'])): ?>
-                                <div class="detail-item error-message">
-                                    <span class="detail-label">Lỗi:</span>
-                                    <span class="detail-value"><?= htmlspecialchars($submission['error_message']) ?></span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($exampleSubmissions)): ?>
-                <div class="problem-section">
-                    <h2 class="section-title">
-                        <i class="bx bx-trophy"></i>
-                        Các submission tốt nhất
-                    </h2>
-                    <div class="submissions-container example-submissions">
-                        <?php foreach ($exampleSubmissions as $submission): ?>
-                        <div class="submission-item status-accepted">
-                            <div class="submission-header">
-                                <div class="submission-status">
-                                    <div class="status-icon status-passed">
-                                        <i class="bx bx-check-circle"></i>
+                                    <div class="submission-meta">
+                                        <span class="submission-time">
+                                            <i class="bx bx-time"></i> 
+                                            <?= date('d/m/Y H:i:s', strtotime($submission['created_at'])) ?>
+                                        </span>
                                     </div>
-                                    <span class="status-text">Accepted</span>
                                 </div>
-                                <div class="submission-meta">
-                                    <span class="submission-user">
-                                        <i class="bx bx-user"></i>
-                                        <?= htmlspecialchars($submission['username']) ?>
-                                    </span>
+                                <div class="submission-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Ngôn ngữ:</span>
+                                        <span class="detail-value language-<?= strtolower($submission['language']) ?>">
+                                            <?= htmlspecialchars($submission['language']) ?>
+                                        </span>
+                                    </div>
+                                    <?php if (isset($submission['test_cases_passed']) && isset($submission['total_test_cases'])): ?>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Test cases:</span>
+                                        <span class="detail-value">
+                                            <?= $submission['test_cases_passed'] ?>/<?= $submission['total_test_cases'] ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($submission['status'] === 'Accepted' && ($submission['execution_time'] > 0 || $submission['memory_usage'] > 0)): ?>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Thời gian:</span>
+                                        <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Bộ nhớ:</span>
+                                        <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($submission['error_message'])): ?>
+                                    <div class="detail-item error-message">
+                                        <span class="detail-label">Lỗi:</span>
+                                        <span class="detail-value"><?= htmlspecialchars($submission['error_message']) ?></span>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="submission-details">
-                                <div class="detail-item">
-                                    <span class="detail-label">Ngôn ngữ:</span>
-                                    <span class="detail-value language-<?= strtolower($submission['language']) ?>">
-                                        <?= htmlspecialchars($submission['language']) ?>
-                                    </span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Thời gian:</span>
-                                    <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Bộ nhớ:</span>
-                                    <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Nộp lúc:</span>
-                                    <span class="detail-value">
-                                        <?= date('d/m/Y H:i', strtotime($submission['created_at'])) ?>
-                                    </span>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                        <div class="empty-state">
+                            <i class="bx bx-code-alt"></i>
+                            <p>Bạn chưa nộp bài nào cho bài tập này.</p>
+                            <p>Hãy viết code và nộp bài để xem kết quả!</p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="problem-section submissions-view hidden" id="all-submissions-view">
+                        <div class="submissions-container all-submissions">
+                            <?php if (!empty($exampleSubmissions)): ?>
+                                <?php foreach ($exampleSubmissions as $submission): ?>
+                                <div class="submission-item status-accepted">
+                                    <div class="submission-header">
+                                        <div class="submission-status">
+                                            <div class="status-icon status-passed">
+                                                <i class="bx bx-check-circle"></i>
+                                            </div>
+                                            <span class="status-text">Accepted</span>
+                                        </div>
+                                        <div class="submission-meta">
+                                            <span class="submission-user">
+                                                <i class="bx bx-user"></i>
+                                                <?= htmlspecialchars($submission['username']) ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="submission-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Ngôn ngữ:</span>
+                                            <span class="detail-value language-<?= strtolower($submission['language']) ?>">
+                                                <?= htmlspecialchars($submission['language']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Thời gian:</span>
+                                            <span class="detail-value"><?= $submission['execution_time'] ?>ms</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Bộ nhớ:</span>
+                                            <span class="detail-value"><?= number_format($submission['memory_usage'], 2) ?>MB</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Nộp lúc:</span>
+                                            <span class="detail-value">
+                                                <?= date('d/m/Y H:i', strtotime($submission['created_at'])) ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="bx bx-code-alt"></i>
+                                    <p>Chưa có submission nào cho bài này.</p>
+                                    <p>Hãy thử giải bài để trở thành người đầu tiên!</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-                <?php endif; ?>
-                
-                <?php if (empty($userSubmissions) && empty($exampleSubmissions)): ?>
-                <div class="problem-section">
-                    <div class="empty-state">
-                        <i class="bx bx-code-alt"></i>
-                        <p>Chưa có submission nào cho bài này.</p>
-                        <p>Hãy thử giải bài để trở thành người đầu tiên!</p>
-                    </div>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -327,6 +331,11 @@ ob_start();
             </div>
                 
             <div class="editor-controls">
+                <a href="/home" class="btn btn-outline back-button">
+                    <i class="bx bx-arrow-back"></i>
+                    <span>Trang chủ</span>
+                </a>
+                
                 <button class="btn btn-outline" id="runCode">
                     <i class="bx bx-play"></i>
                     Chạy thử

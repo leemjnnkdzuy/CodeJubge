@@ -1,36 +1,209 @@
+# CodeJudge .htaccess Configuration
+# Đặt file này trong thư mục public/ (document root)
+
+# =============================================================================
+# URL REWRITING - Routing system
+# =============================================================================
+
 RewriteEngine On
 
-# Handle clean URLs - redirect all requests to index.php
+# Redirect all requests to index.php (except for files that exist)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]
 
-# Security: Protect sensitive files
-<FilesMatch "\.(env|ini|log|sh|sql)$">
-    Require all denied
+# =============================================================================
+# SECURITY HEADERS
+# =============================================================================
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql|conf|config)$">
+    Order Allow,Deny
+    Deny from all
 </FilesMatch>
 
-# Enable compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
+# Prevent access to PHP files in certain directories
+<IfModule mod_rewrite.c>
+    RewriteRule ^(app|config|temp)/.*$ - [F,L]
 </IfModule>
 
-# Set cache headers
-<IfModule mod_expires.c>
-    ExpiresActive on
-    ExpiresByType text/css "access plus 1 year"
-    ExpiresByType application/javascript "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/jpg "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
+# Security headers
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Enable XSS protection
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Prevent framing (clickjacking protection)
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # Force HTTPS in production (uncomment next line)
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>
+
+# =============================================================================
+# COMPRESSION - Improve performance
+# =============================================================================
+
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject
+    AddOutputFilterByType DEFLATE application/x-font
+    AddOutputFilterByType DEFLATE application/x-font-opentype
+    AddOutputFilterByType DEFLATE application/x-font-otf
+    AddOutputFilterByType DEFLATE application/x-font-truetype
+    AddOutputFilterByType DEFLATE application/x-font-ttf
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE font/opentype
+    AddOutputFilterByType DEFLATE font/otf
+    AddOutputFilterByType DEFLATE font/ttf
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE image/x-icon
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/xml
+</IfModule>
+
+# =============================================================================
+# CACHING - Browser caching for static files
+# =============================================================================
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Fonts
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    
+    # HTML and XML
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType text/xml "access plus 0 seconds"
+    ExpiresByType application/xml "access plus 0 seconds"
+    ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+# =============================================================================
+# ERROR PAGES - Custom error pages
+# =============================================================================
+
+ErrorDocument 404 /404.php
+ErrorDocument 403 /403.php
+ErrorDocument 500 /500.php
+
+# =============================================================================
+# PHP SETTINGS - Basic PHP configuration
+# =============================================================================
+
+<IfModule mod_php7.c>
+    # Increase memory limit for judge system
+    php_value memory_limit 256M
+    
+    # Increase execution time
+    php_value max_execution_time 30
+    
+    # File upload settings
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    
+    # Session settings
+    php_value session.cookie_httponly 1
+    php_value session.use_strict_mode 1
+    
+    # Hide PHP version
+    php_flag expose_php off
+</IfModule>
+
+# =============================================================================
+# CORS - Cross-Origin Resource Sharing (if needed for API)
+# =============================================================================
+
+<IfModule mod_headers.c>
+    # Allow CORS for API endpoints
+    # Header always set Access-Control-Allow-Origin "*"
+    # Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    # Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# =============================================================================
+# DIRECTORY BROWSING - Disable directory listing
+# =============================================================================
+
+Options -Indexes
+
+# =============================================================================
+# FILE ACCESS RESTRICTIONS
+# =============================================================================
+
+# Deny access to composer files
+<FilesMatch "(composer\.(json|lock|phar))$">
+    Order Allow,Deny  
+    Deny from all
+</FilesMatch>
+
+# Deny access to git files
+<FilesMatch "(\.git)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to environment files
+<FilesMatch "^\.env">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to backup files
+<FilesMatch "\.(bak|backup|old|tmp|temp)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# =============================================================================
+# FORCE WWW OR NON-WWW (choose one)
+# =============================================================================
+
+# Force www
+# RewriteCond %{HTTP_HOST} !^www\.
+# RewriteRule ^(.*)$ http://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Force non-www
+# RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+# RewriteRule ^(.*)$ http://%1%{REQUEST_URI} [R=301,L]
+
+# =============================================================================
+# HTTPS REDIRECT (uncomment for production with SSL)
+# =============================================================================
+
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# =============================================================================
+# MAINTENANCE MODE (uncomment when doing maintenance)
+# =============================================================================
+
+# RewriteCond %{REQUEST_URI} !/maintenance.html$
+# RewriteCond %{REMOTE_ADDR} !^192\.168\.1\.100$  # Replace with your IP
+# RewriteRule $ /maintenance.html [R=302,L]

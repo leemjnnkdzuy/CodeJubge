@@ -2,7 +2,6 @@
 
 class SecurityHelper
 {
-    // Dangerous functions that should be blocked
     private static $dangerousFunctions = [
         // File operations
         'fopen', 'fwrite', 'fread', 'file_get_contents', 'file_put_contents',
@@ -22,59 +21,47 @@ class SecurityHelper
         'exit', 'die'
     ];
     
-    // Dangerous C++ patterns
     private static $dangerousCppPatterns = [
-        // System calls
         '/system\s*\(/',
         '/popen\s*\(/',
         '/exec[vl]?\s*\(/',
         
-        // File operations
         '/fopen\s*\(/',
         '/freopen\s*\(/',
         '/remove\s*\(/',
         '/rename\s*\(/',
         
-        // Network operations
         '/socket\s*\(/',
         '/bind\s*\(/',
         '/listen\s*\(/',
         '/accept\s*\(/',
         '/connect\s*\(/',
         
-        // Memory operations that could be dangerous
         '/malloc\s*\(/',
         '/calloc\s*\(/',
         '/realloc\s*\(/',
         '/free\s*\(/',
         
-        // Assembly code
         '/__asm__/',
         '/asm\s*\{/',
         
-        // Preprocessor directives that could be dangerous
         '/#\s*include\s*<\s*(windows|winapi|shellapi)/',
         '/#\s*pragma\s/',
         
-        // Fork/thread operations
         '/fork\s*\(/',
         '/pthread_create\s*\(/',
         
-        // Signal handling
         '/signal\s*\(/',
         '/raise\s*\(/',
         '/kill\s*\(/',
         
-        // Infinite loops patterns (simple detection)
         '/while\s*\(\s*true\s*\)/',
         '/while\s*\(\s*1\s*\)/',
         '/for\s*\(\s*;\s*;\s*\)/',
         
-        // Recursive includes
         '/#\s*include\s*"/',
     ];
     
-    // Safe C++ headers that are allowed
     private static $allowedCppHeaders = [
         'iostream', 'vector', 'string', 'algorithm', 'map', 'set', 'queue',
         'stack', 'deque', 'list', 'utility', 'iterator', 'functional',
@@ -82,15 +69,11 @@ class SecurityHelper
         'cfloat', 'cctype', 'cassert', 'ctime', 'sstream', 'iomanip',
         'bitset', 'array', 'tuple', 'memory', 'limits', 'random'
     ];
-    
-    /**
-     * Validate C++ code for security issues
-     */
+
     public static function validateCppCode($code)
     {
         $issues = [];
         
-        // Check for dangerous patterns
         foreach (self::$dangerousCppPatterns as $pattern) {
             if (preg_match($pattern, $code)) {
                 $issues[] = "Potentially dangerous code pattern detected";
@@ -98,7 +81,6 @@ class SecurityHelper
             }
         }
         
-        // Check includes - only allow safe headers
         if (preg_match_all('/#\s*include\s*<([^>]+)>/', $code, $matches)) {
             foreach ($matches[1] as $header) {
                 $header = trim($header);
@@ -108,12 +90,10 @@ class SecurityHelper
             }
         }
         
-        // Check for local includes (not allowed)
         if (preg_match('/#\s*include\s*"/', $code)) {
             $issues[] = "Local file includes are not allowed";
         }
         
-        // Check for excessive nested loops (potential performance issue)
         $loopDepth = 0;
         $maxLoopDepth = 0;
         $tokens = explode("\n", $code);
@@ -132,7 +112,6 @@ class SecurityHelper
             $issues[] = "Excessive nested loops detected (max 3 levels allowed)";
         }
         
-        // Check code length
         if (strlen($code) > 50000) {
             $issues[] = "Code too long (max 50KB allowed)";
         }
@@ -143,18 +122,12 @@ class SecurityHelper
         ];
     }
     
-    /**
-     * Sanitize filename to prevent directory traversal
-     */
     public static function sanitizeFilename($filename)
     {
-        // Remove any path components
         $filename = basename($filename);
         
-        // Remove dangerous characters
         $filename = preg_replace('/[^a-zA-Z0-9._-]/', '', $filename);
         
-        // Ensure it's not empty and not too long
         if (empty($filename) || strlen($filename) > 100) {
             $filename = 'file_' . uniqid();
         }
@@ -162,35 +135,23 @@ class SecurityHelper
         return $filename;
     }
     
-    /**
-     * Generate safe temporary filename
-     */
     public static function generateSafeFilename($prefix = 'code', $extension = '.cpp')
     {
         return $prefix . '_' . uniqid() . '_' . time() . $extension;
     }
     
-    /**
-     * Validate memory limit (in MB)
-     */
     public static function validateMemoryLimit($limit)
     {
-        $maxAllowed = 512; // 512 MB max
+        $maxAllowed = 512;
         return min(max(1, $limit), $maxAllowed);
     }
     
-    /**
-     * Validate time limit (in seconds)
-     */
     public static function validateTimeLimit($limit)
     {
-        $maxAllowed = 10; // 10 seconds max
+        $maxAllowed = 10;
         return min(max(1, $limit), $maxAllowed);
     }
     
-    /**
-     * Clean up old temporary files
-     */
     public static function cleanupTempFiles($tempDir, $maxAge = 3600)
     {
         if (!is_dir($tempDir)) {
@@ -210,23 +171,15 @@ class SecurityHelper
         }
     }
     
-    /**
-     * Escape shell command arguments
-     */
     public static function escapeShellArg($arg)
     {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows escaping
             return '"' . str_replace('"', '""', $arg) . '"';
         } else {
-            // Unix escaping
             return escapeshellarg($arg);
         }
     }
     
-    /**
-     * Get safe compiler flags for C++
-     */
     public static function getSafeCppFlags()
     {
         return [
@@ -236,6 +189,114 @@ class SecurityHelper
             '-Wextra',
             '-Werror=array-bounds',
             '-fstack-protector-strong'
+        ];
+    }
+    
+    public static function validatePythonCode($code)
+    {
+        $issues = [];
+        
+        // Dangerous Python modules and functions
+        $dangerousPythonPatterns = [
+            '/import\s+os/',
+            '/from\s+os\s+import/',
+            '/import\s+sys/',
+            '/import\s+subprocess/',
+            '/import\s+socket/',
+            '/import\s+urllib/',
+            '/import\s+requests/',
+            '/open\s*\(/',
+            '/exec\s*\(/',
+            '/eval\s*\(/',
+            '/__import__\s*\(/',
+            '/compile\s*\(/',
+        ];
+        
+        foreach ($dangerousPythonPatterns as $pattern) {
+            if (preg_match($pattern, $code)) {
+                $issues[] = "Potentially dangerous Python code pattern detected";
+                break;
+            }
+        }
+        
+        if (strlen($code) > 50000) {
+            $issues[] = "Code too long (max 50KB allowed)";
+        }
+        
+        return [
+            'safe' => empty($issues),
+            'issues' => $issues
+        ];
+    }
+    
+    public static function validateJavaCode($code)
+    {
+        $issues = [];
+        
+        // Dangerous Java classes and methods
+        $dangerousJavaPatterns = [
+            '/Runtime\.getRuntime\(\)/',
+            '/ProcessBuilder/',
+            '/System\.exit\s*\(/',
+            '/File\s*\(/',
+            '/FileInputStream/',
+            '/FileOutputStream/',
+            '/Socket\s*\(/',
+            '/ServerSocket/',
+            '/URLConnection/',
+            '/Class\.forName/',
+            '/Method\.invoke/',
+            '/reflect\./',
+        ];
+        
+        foreach ($dangerousJavaPatterns as $pattern) {
+            if (preg_match($pattern, $code)) {
+                $issues[] = "Potentially dangerous Java code pattern detected";
+                break;
+            }
+        }
+        
+        if (strlen($code) > 50000) {
+            $issues[] = "Code too long (max 50KB allowed)";
+        }
+        
+        return [
+            'safe' => empty($issues),
+            'issues' => $issues
+        ];
+    }
+    
+    public static function validateJavaScriptCode($code)
+    {
+        $issues = [];
+        
+        // Dangerous JavaScript patterns
+        $dangerousJsPatterns = [
+            '/require\s*\(\s*[\'\"](fs|child_process|os|path|http|https|net|url)[\'\"]\s*\)/',
+            '/eval\s*\(/',
+            '/Function\s*\(/',
+            '/setTimeout\s*\(/',
+            '/setInterval\s*\(/',
+            '/XMLHttpRequest/',
+            '/fetch\s*\(/',
+            '/import\s*\(/',
+            '/require\s*\(/',
+        ];
+        
+        foreach ($dangerousJsPatterns as $pattern) {
+            if (preg_match($pattern, $code)) {
+                $issues[] = "Potentially dangerous JavaScript code pattern detected";
+                break;
+            }
+        }
+        
+        if (strlen($code) > 50000) {
+            $issues[] = "Code too long (max 50KB allowed)";
+        }
+        
+        return [
+            'safe' => empty($issues),
+            'issues' => $issues
         ];
     }
 }

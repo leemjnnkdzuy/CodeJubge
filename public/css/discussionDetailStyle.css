@@ -508,6 +508,77 @@
 	color: var(--text-primary);
 }
 
+.reply-actions-menu-options {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: white;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-medium);
+	min-width: 200px;
+	z-index: 100;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(-10px);
+	transition: all 0.3s ease;
+}
+
+.reply-actions-menu-options.show {
+	opacity: 1;
+	visibility: visible;
+	transform: translateY(0);
+}
+
+.reply-dropdown-item {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	color: var(--text-secondary);
+	text-decoration: none;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	border: none;
+	background: none;
+	width: 100%;
+	text-align: left;
+	font-size: 0.9rem;
+}
+
+.reply-dropdown-item:hover {
+	background: var(--light-gray);
+	color: var(--text-primary);
+}
+
+.reply-dropdown-item.edit {
+	color: var(--primary-blue);
+}
+
+.reply-dropdown-item.edit:hover {
+	background: var(--primary-blue-light);
+}
+
+.reply-dropdown-item.delete {
+	color: #ef4444;
+}
+
+.reply-dropdown-item.delete:hover {
+	background: #fef2f2;
+}
+
+.reply-dropdown-item.mark-solution {
+	color: var(--secondary-green);
+}
+
+.reply-dropdown-item.mark-solution:hover {
+	background: rgba(3, 218, 198, 0.1);
+}
+
+.reply-dropdown-item i {
+	font-size: 1rem;
+}
+
 .reply-content {
 	color: var(--text-primary);
 	line-height: 1.6;
@@ -741,6 +812,11 @@
 	.reply-action-buttons {
 		justify-content: center;
 	}
+
+	.reply-actions-menu-options {
+		right: -10px;
+		min-width: 180px;
+	}
 }
 
 @media (max-width: 480px) {
@@ -762,5 +838,535 @@
 	.reply-avatar {
 		width: 36px;
 		height: 36px;
+	}
+
+	.reply-actions-menu-options {
+		right: -20px;
+		min-width: 160px;
+		font-size: 0.8rem;
+	}
+
+	.reply-dropdown-item {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.8rem;
+	}
+}
+
+/* Modal Discussions - Styled like Profile Modal */
+.discussions-modal {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.4);
+	z-index: 9999;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.discussions-modal.show {
+	display: flex;
+	animation: discussionsModalFadeIn 0.3s ease;
+}
+
+@keyframes discussionsModalFadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.discussions-modal-content {
+	background: white;
+	border-radius: 24px;
+	width: 100%;
+	max-width: 700px;
+	max-height: 90vh;
+	overflow-y: auto;
+	animation: discussionsModalSlideIn 0.3s ease;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+@keyframes discussionsModalSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-50px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.discussions-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 25px 30px 15px;
+	border-bottom: 1px solid #eee;
+	flex-shrink: 0;
+	position: sticky;
+	top: 0;
+	background: white;
+	z-index: 1;
+	border-radius: 24px 24px 0 0;
+}
+
+.discussions-modal-header h2 {
+	margin: 0;
+	font-size: 1.5rem;
+	color: var(--text-primary);
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.discussions-modal-header h2 i {
+	color: var(--primary-blue);
+	font-size: 1.8rem;
+}
+
+.discussions-modal-close {
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	color: #999;
+	cursor: pointer;
+	padding: 8px;
+	transition: all 0.3s ease;
+	border-radius: 50%;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.discussions-modal-close:hover {
+	color: #333;
+	background: var(--light-gray);
+}
+
+.discussions-form {
+	padding: 25px 30px 30px;
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.discussions-form-group {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 0;
+}
+
+.discussions-form-group.full-width {
+	width: 100%;
+}
+
+.discussions-form-group label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+	color: var(--text-primary);
+	font-size: 0.95rem;
+}
+
+.discussions-form-group input,
+.discussions-form-group textarea,
+.discussions-form-group select {
+	width: 100%;
+	padding: 12px 15px;
+	border: 2px solid var(--border-color);
+	border-radius: var(--radius-md);
+	font-size: 1rem;
+	transition: all 0.3s ease;
+	font-family: inherit;
+	box-sizing: border-box;
+	background: var(--white);
+}
+
+.discussions-form-group input:focus,
+.discussions-form-group textarea:focus,
+.discussions-form-group select:focus {
+	outline: none;
+	border-color: var(--primary-blue);
+	box-shadow: 0 0 0 3px rgba(32, 190, 255, 0.1);
+}
+
+.discussions-form-group textarea {
+	resize: vertical;
+	min-height: 120px;
+}
+
+.discussions-form-group select {
+	cursor: pointer;
+}
+
+.discussions-form-note {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-top: 5px;
+	line-height: 1.4;
+}
+
+.discussions-form-actions {
+	width: 100%;
+	display: flex;
+	justify-content: flex-end;
+	gap: 15px;
+	margin-top: 10px;
+	padding-top: 15px;
+	border-top: 1px solid var(--border-color);
+}
+
+.discussions-btn-cancel {
+	background: var(--medium-gray);
+	color: var(--text-secondary);
+	border: none;
+	padding: 12px 25px;
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	font-size: 0.95rem;
+}
+
+.discussions-btn-cancel:hover {
+	background: var(--dark-gray);
+	color: white;
+}
+
+.discussions-btn-submit {
+	background: var(--primary-blue);
+	color: white;
+	border: none;
+	padding: 12px 25px;
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.95rem;
+}
+
+.discussions-btn-submit:hover {
+	background: var(--primary-blue-dark);
+}
+
+.discussions-btn-submit:disabled {
+	background: var(--medium-gray);
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+/* Loading state for submit button */
+.discussions-btn-submit.loading {
+	pointer-events: none;
+}
+
+.discussions-loading-spinner {
+	width: 16px;
+	height: 16px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top: 2px solid white;
+	border-radius: 50%;
+	animation: discussionsSpinnerRotate 1s linear infinite;
+}
+
+@keyframes discussionsSpinnerRotate {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+/* Error states */
+.discussions-form-group.error input,
+.discussions-form-group.error textarea,
+.discussions-form-group.error select {
+	border-color: #ef4444;
+}
+
+.discussions-error-message {
+	color: #ef4444;
+	font-size: 0.85rem;
+	margin-top: 5px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.discussions-error-message i {
+	font-size: 1rem;
+}
+
+/* Success message */
+.discussions-success-message {
+	color: var(--secondary-green);
+	font-size: 0.85rem;
+	margin-top: 5px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.discussions-success-message i {
+	font-size: 1rem;
+}
+
+/* Responsive design for modal */
+@media (max-width: 768px) {
+	.discussions-modal {
+		padding: 10px;
+	}
+
+	.discussions-modal-content {
+		max-width: 100%;
+		max-height: 95vh;
+		border-radius: 16px;
+	}
+
+	.discussions-modal-header {
+		padding: 20px 20px 15px;
+		border-radius: 16px 16px 0 0;
+	}
+
+	.discussions-modal-header h2 {
+		font-size: 1.3rem;
+	}
+
+	.discussions-form {
+		padding: 20px;
+		gap: 15px;
+	}
+
+	.discussions-form-actions {
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.discussions-btn-cancel,
+	.discussions-btn-submit {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+/* Delete Confirmation Modal */
+#deleteReplyConfirmModal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.6);
+	z-index: 99999;
+	display: none;
+	justify-content: center;
+	align-items: center;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+#deleteReplyConfirmModal.show {
+	display: flex !important;
+}
+
+#deleteReplyConfirmModal .modal {
+	background: white;
+	border-radius: 16px;
+	width: 100%;
+	max-width: 450px;
+	max-height: 300px;
+	box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+	transform: scale(0.8);
+	opacity: 0;
+	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+	overflow: hidden;
+	position: relative;
+	z-index: 100000;
+}
+
+#deleteReplyConfirmModal.show .modal {
+	transform: scale(1) !important;
+	opacity: 1 !important;
+}
+
+#deleteReplyConfirmModal[style*="flex"] {
+	display: flex !important;
+	visibility: visible !important;
+}
+
+#deleteReplyConfirmModal[style*="flex"] .modal {
+	display: block !important;
+	transform: scale(1) !important;
+	opacity: 1 !important;
+}
+
+#deleteReplyConfirmModal .modal-header {
+	background: linear-gradient(135deg, #ef4444, #dc2626);
+	color: white;
+	padding: 25px 30px 15px;
+	text-align: center;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#deleteReplyConfirmModal .modal-header h3 {
+	margin: 0;
+	font-size: 1.4rem;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	color: white;
+}
+
+#deleteReplyConfirmModal .modal-header i {
+	font-size: 1.5rem;
+}
+
+#deleteReplyConfirmModal .modal-body {
+	padding: 30px;
+	text-align: center;
+	background: white;
+}
+
+#deleteReplyConfirmModal .modal-body p {
+	margin: 0 0 20px 0;
+	font-size: 1rem;
+	color: var(--text-primary);
+	line-height: 1.6;
+	font-weight: 500;
+}
+
+#deleteReplyConfirmModal .warning-text {
+	background: var(--light-gray);
+	border: 2px solid var(--border-color);
+	border-radius: var(--radius-md);
+	padding: 16px 20px;
+	margin: 20px 0 0 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	border-left: 4px solid #ef4444;
+}
+
+#deleteReplyConfirmModal .warning-text i {
+	color: #ef4444;
+	font-size: 1.25rem;
+	flex-shrink: 0;
+}
+
+#deleteReplyConfirmModal .warning-text span {
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+#deleteReplyConfirmModal .modal-actions {
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 30px;
+	background: white;
+	border-top: 1px solid var(--border-color);
+}
+
+.confirm-delete-cancel-btn,
+.confirm-delete-accept-btn {
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 0.9rem;
+	padding: 12px 24px;
+	border-radius: 32px;
+	border: 2px solid transparent;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	flex: 1;
+	min-height: 44px;
+	box-sizing: border-box;
+}
+
+.confirm-delete-cancel-btn {
+	background: var(--medium-gray);
+	color: var(--text-secondary);
+	border-color: var(--medium-gray);
+}
+
+.confirm-delete-cancel-btn:hover {
+	background: var(--dark-gray);
+	color: white;
+	border-color: var(--dark-gray);
+}
+
+.confirm-delete-accept-btn {
+	background: #ef4444;
+	color: white;
+	border-color: #ef4444;
+}
+
+.confirm-delete-accept-btn:hover {
+	background: #dc2626;
+	border-color: #dc2626;
+}
+
+@media (max-width: 768px) {
+	#deleteReplyConfirmModal {
+		padding: 16px;
+	}
+
+	#deleteReplyConfirmModal .modal {
+		max-width: 100%;
+	}
+
+	#deleteReplyConfirmModal .modal-header {
+		padding: 20px;
+	}
+
+	#deleteReplyConfirmModal .modal-header h3 {
+		font-size: 1.2rem;
+	}
+
+	#deleteReplyConfirmModal .modal-body {
+		padding: 24px 20px;
+	}
+
+	#deleteReplyConfirmModal .modal-actions {
+		flex-direction: column;
+		gap: 12px;
+		padding: 20px;
+	}
+
+	.confirm-delete-cancel-btn,
+	.confirm-delete-accept-btn {
+		width: 100%;
 	}
 }

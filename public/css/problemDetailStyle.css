@@ -77,6 +77,12 @@
 	display: block;
 }
 
+#submissions-tab.active {
+	display: flex;
+	flex-direction: column;
+	overflow-y: hidden;
+}
+
 .problem-header {
 	margin-bottom: var(--spacing-xl);
 	padding-bottom: var(--spacing-lg);
@@ -125,7 +131,6 @@
 	font-weight: 700;
 	color: var(--text-primary);
 	margin-bottom: var(--spacing-md);
-	margin-left: 100px;
 	line-height: 1.3;
 }
 
@@ -264,7 +269,6 @@
 	white-space: pre-wrap;
 }
 
-/* Empty State */
 .empty-state {
 	text-align: center;
 	padding: var(--spacing-xxl) var(--spacing-lg);
@@ -282,17 +286,15 @@
 	margin: 0;
 }
 
-/* Submissions */
 .submissions-container {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spacing-md);
-	max-height: 60vh;
+	max-height: 100%;
 	overflow-y: auto;
 	padding-right: var(--spacing-sm);
 }
 
-/* Editor Panel */
 .editor-panel {
 	flex: 1;
 	min-width: 500px;
@@ -355,7 +357,7 @@
 	color: var(--text-primary);
 	font-size: 0.875rem;
 	min-width: 120px;
-	height: 38px; /* Đảm bảo cùng độ cao với buttons */
+	height: 38px;
 }
 
 .language-select:focus {
@@ -364,7 +366,6 @@
 	box-shadow: 0 0 0 2px rgba(32, 190, 255, 0.2);
 }
 
-/* Đảm bảo các nút có cùng độ cao */
 .editor-controls .btn {
 	height: 38px;
 	display: flex;
@@ -376,19 +377,29 @@
 	white-space: nowrap;
 }
 
+.editor-controls .back-button {
+	position: static;
+	height: 38px;
+	transform: none;
+	z-index: auto;
+	margin-right: auto;
+}
+
+.editor-controls .back-button:hover {
+	transform: translateX(-2px);
+}
+
 .editor-controls .btn i {
 	margin-right: var(--spacing-xs);
 	font-size: 1rem;
 }
 
-/* Đảm bảo nút chạy thử và nút nộp bài có cùng style */
 #runCode,
 #submitCode {
 	height: 38px;
 	min-width: 100px;
 }
 
-/* Editor Container */
 .editor-container {
 	flex: 1;
 	position: relative;
@@ -401,7 +412,6 @@
 	width: 100%;
 }
 
-/* Console Panel */
 .console-panel {
 	height: 200px;
 	min-height: 200px;
@@ -451,7 +461,6 @@
 	font-size: 1rem;
 }
 
-/* Test Cases */
 .test-case {
 	background: var(--white);
 	border: 1px solid var(--border-color);
@@ -483,7 +492,6 @@
 	margin-bottom: 0;
 }
 
-/* Responsive Design */
 @media (max-width: 1200px) {
 	.problem-workspace {
 		flex-direction: column;
@@ -528,6 +536,19 @@
 		padding: var(--spacing-lg);
 	}
 
+	#submissions-tab.active {
+		padding: 0;
+	}
+
+	#submissions-tab.active .submissions-global-header {
+		padding: var(--spacing-lg);
+		margin-bottom: var(--spacing-md);
+	}
+
+	#submissions-tab.active .submissions-view-container {
+		padding: 0 var(--spacing-lg);
+	}
+
 	.problem-title {
 		font-size: 1.5rem;
 	}
@@ -545,17 +566,24 @@
 
 	.editor-controls {
 		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: var(--spacing-sm);
+	}
+
+	.editor-controls .back-button {
+		margin-right: 0;
+		order: -1;
 	}
 
 	.editor-controls .btn {
-		height: 36px; /* Nhỏ hơn một chút trên mobile */
+		height: 36px;
 		font-size: 0.75rem;
 		padding: 0 var(--spacing-sm);
 		min-width: 80px;
 	}
 
 	.language-select {
-		height: 36px; /* Cùng độ cao với buttons trên mobile */
+		height: 36px;
 	}
 
 	#runCode,
@@ -583,6 +611,19 @@
 		padding: var(--spacing-md);
 	}
 
+	#submissions-tab.active {
+		padding: 0;
+	}
+
+	#submissions-tab.active .submissions-global-header {
+		padding: var(--spacing-md);
+		margin-bottom: var(--spacing-sm);
+	}
+
+	#submissions-tab.active .submissions-view-container {
+		padding: 0 var(--spacing-md);
+	}
+
 	.problem-header {
 		margin-bottom: var(--spacing-lg);
 	}
@@ -593,7 +634,7 @@
 	}
 
 	.problem-title {
-		margin-top: 0; /* Reset margin trên mobile */
+		margin-top: 0;
 	}
 
 	.problem-meta {
@@ -606,6 +647,12 @@
 		gap: var(--spacing-sm);
 	}
 
+	.editor-controls .back-button {
+		width: 100%;
+		justify-content: center;
+		margin-right: 0;
+	}
+
 	.language-select {
 		width: 100%;
 	}
@@ -616,7 +663,6 @@
 	}
 }
 
-/* Loading States */
 .loading {
 	opacity: 0.6;
 	pointer-events: none;
@@ -636,7 +682,6 @@
 	animation: spin 1s linear infinite;
 }
 
-/* Animations */
 .fade-in {
 	animation: fadeIn 0.3s ease-in;
 }
@@ -652,7 +697,6 @@
 	}
 }
 
-/* Scrollbar Styling for Problem Content */
 .problem-content::-webkit-scrollbar {
 	width: 6px;
 }
@@ -702,7 +746,6 @@
 	font-style: italic;
 }
 
-/* Status specific styling */
 .status-accepted {
 	border-left: 4px solid #28a745;
 }
@@ -727,7 +770,6 @@
 	border-left: 4px solid #6f42c1;
 }
 
-/* Result styling */
 .test-success {
 	background: #d4edda;
 	border: 1px solid #c3e6cb;
@@ -774,7 +816,6 @@
 	white-space: pre-wrap;
 }
 
-/* Submission details styles */
 .submission-details {
 	margin-top: var(--spacing-md);
 	padding: var(--spacing-md);
@@ -803,13 +844,11 @@
 	font-weight: 600;
 }
 
-/* Simple submission item styles */
 .submission-item {
 	background: var(--white);
 	border: 1px solid var(--border-color);
 	border-radius: var(--radius-md);
 	margin-bottom: var(--spacing-md);
-	overflow: hidden;
 	transition: all 0.2s ease;
 }
 
@@ -911,7 +950,6 @@
 	font-weight: 500;
 }
 
-/* Language specific colors */
 .language-python {
 	color: #3776ab;
 }
@@ -937,7 +975,6 @@
 	color: #ed8b00;
 }
 
-/* Error message styling */
 .error-message .detail-value {
 	color: var(--error);
 	font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
@@ -947,7 +984,6 @@
 	border-radius: var(--radius-sm);
 }
 
-/* Example submissions */
 .example-submissions .submission-item {
 	border-left-color: #28a745;
 }
@@ -960,44 +996,44 @@
 	font-size: 0.875rem;
 }
 
-/* Custom scrollbar styles */
-.tab-content::-webkit-scrollbar,
+.tab-content:not(#submissions-tab)::-webkit-scrollbar,
 .submissions-container::-webkit-scrollbar,
 .console-content::-webkit-scrollbar {
 	width: 6px;
 }
 
-.tab-content::-webkit-scrollbar-track,
+.tab-content:not(#submissions-tab)::-webkit-scrollbar-track,
 .submissions-container::-webkit-scrollbar-track,
 .console-content::-webkit-scrollbar-track {
 	background: var(--light-gray);
 	border-radius: 3px;
 }
 
-.tab-content::-webkit-scrollbar-thumb,
+.tab-content:not(#submissions-tab)::-webkit-scrollbar-thumb,
 .submissions-container::-webkit-scrollbar-thumb,
 .console-content::-webkit-scrollbar-thumb {
 	background: var(--border-color);
 	border-radius: 3px;
 }
 
-.tab-content::-webkit-scrollbar-thumb:hover,
+.tab-content:not(#submissions-tab)::-webkit-scrollbar-thumb:hover,
 .submissions-container::-webkit-scrollbar-thumb:hover,
 .console-content::-webkit-scrollbar-thumb:hover {
 	background: var(--primary-blue);
 }
 
-/* Ensure proper spacing in tab content */
 .tab-content {
 	padding-bottom: var(--spacing-xxl);
 }
 
-/* Problem section spacing adjustments */
+#submissions-tab.active {
+	padding-bottom: 0;
+}
+
 .problem-section:last-child {
 	margin-bottom: 0;
 }
 
-/* Submit Confirmation Popup */
 .submit-popup-overlay {
 	position: fixed;
 	top: 0;
@@ -1077,7 +1113,7 @@
 	transition: all 0.2s ease;
 }
 
-.submit-popup-close i{
+.submit-popup-close i {
 	font-size: 2rem;
 }
 
@@ -1170,7 +1206,6 @@
 	font-weight: 600;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
 	.submit-popup {
 		margin: var(--spacing-md);
@@ -1188,5 +1223,186 @@
 
 	.submit-popup-footer {
 		flex-direction: column;
+	}
+}
+
+.submissions-global-header {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border-color);
+	margin-bottom: var(--spacing-lg);
+	flex-shrink: 0;
+}
+
+.submissions-view-container {
+	flex: 1;
+	overflow-y: auto;
+	padding-right: var(--spacing-sm);
+}
+
+.submissions-view-container::-webkit-scrollbar {
+	width: 6px;
+}
+
+.submissions-view-container::-webkit-scrollbar-track {
+	background: var(--light-gray);
+	border-radius: 3px;
+}
+
+.submissions-view-container::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 3px;
+}
+
+.submissions-view-container::-webkit-scrollbar-thumb:hover {
+	background: var(--primary-blue);
+}
+
+.submissions-global-header .section-title {
+	margin: 0;
+	padding: 0;
+	border: none;
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.submissions-toggle {
+	position: relative;
+}
+
+.single-toggle-btn:hover {
+	background: var(--primary-blue-light);
+	color: var(--primary-blue-dark);
+	border-color: var(--primary-blue);
+	text-decoration: none;
+}
+
+.single-toggle-btn #toggleText {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-xs);
+}
+
+.single-toggle-btn i.bx-chevron-down {
+	font-size: 1rem;
+	transition: transform 0.2s ease;
+}
+
+.single-toggle-btn.open i.bx-chevron-down {
+	transform: rotate(180deg);
+}
+
+.toggle-dropdown {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: var(--white);
+	border: 1px solid var(--border-color);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 1000;
+	min-width: 250px;
+	display: none;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.toggle-dropdown.show {
+	display: block;
+	animation: fadeInDown 0.2s ease;
+}
+
+.toggle-option {
+	padding: var(--spacing-md) var(--spacing-lg);
+	border-bottom: 1px solid var(--border-color);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+}
+
+.toggle-option:last-child {
+	border-bottom: none;
+}
+
+.toggle-option:hover {
+	background: var(--primary-blue-light);
+	color: var(--primary-blue-dark);
+}
+
+.toggle-option.active {
+	background: var(--primary-blue);
+	color: var(--white);
+}
+
+.toggle-option i {
+	font-size: 1rem;
+}
+
+@keyframes fadeInDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.submissions-view {
+	transition: all 0.3s ease;
+}
+
+.submissions-view.hidden {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.submissions-global-header {
+		flex-direction: column;
+		gap: var(--spacing-md);
+		align-items: stretch;
+		padding: var(--spacing-md);
+	}
+
+	.submissions-global-header .section-title {
+		font-size: 1.1rem;
+		text-align: center;
+	}
+
+	.submissions-toggle {
+		align-self: center;
+	}
+
+	.single-toggle-btn {
+		width: 100%;
+		max-width: 280px;
+	}
+
+	.toggle-dropdown {
+		left: 0;
+		right: 0;
+		min-width: auto;
+	}
+}
+
+@media (max-width: 480px) {
+	.submissions-global-header {
+		padding: var(--spacing-sm);
+	}
+
+	.single-toggle-btn {
+		padding: var(--spacing-sm);
+		font-size: 0.75rem;
+		min-width: 180px;
+	}
+
+	.toggle-option {
+		padding: var(--spacing-sm) var(--spacing-md);
+		font-size: 0.875rem;
 	}
 }

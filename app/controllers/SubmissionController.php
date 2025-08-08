@@ -227,5 +227,49 @@ class SubmissionController extends Controller
             ];
         }
     }
+    
+    public function detail($id)
+    {
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        
+        try {
+            $sql = "SELECT s.*, p.title as problem_title, p.slug as problem_slug
+                    FROM submissions s
+                    JOIN problems p ON s.problem_id = p.id
+                    WHERE s.id = :id AND s.user_id = :user_id";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $submission = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$submission) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Submission not found']);
+                exit;
+            }
+            
+            // Return JSON response for AJAX calls
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode($submission);
+                exit;
+            }
+            
+            // For regular page view
+            $this->view('submission_detail', ['submission' => $submission]);
+            
+        } catch (Exception $e) {
+            error_log("Submission detail error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Server error']);
+            exit;
+        }
+    }
 }
 ?>

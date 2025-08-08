@@ -111,13 +111,6 @@ $content = ob_start();
                             <h3 class="discussion-title"><?= htmlspecialchars($discussion['title']) ?></h3>
                             <div class="discussion-author">
                                 <span><?= htmlspecialchars($discussion['first_name'] . ' ' . $discussion['last_name']) ?></span>
-                                <div class="discussion-badges">
-                                    <?php if (!empty($discussion['badges'])): ?>
-                                        <?php foreach ($discussion['badges'] as $badge): ?>
-                                            <span class="author-badge"><?= htmlspecialchars($badge) ?></span>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
                                 <span class="discussion-time"><?= $timeAgo ?></span>
                             </div>
                         </div>

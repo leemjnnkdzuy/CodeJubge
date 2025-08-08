@@ -67,7 +67,6 @@ int main() {
         };
     }
     
-    // Initialize Monaco Editor
     if (typeof require !== 'undefined' && document.getElementById('monaco-editor')) {
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
         
@@ -84,14 +83,12 @@ int main() {
                 wordWrap: 'on'
             });
             
-            // Set up auto-save listener for Monaco
             editor.onDidChangeModelContent(() => {
                 scheduleAutoSave();
             });
         });
     }
     
-    // Tab switching functionality
     document.querySelectorAll('.problem-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const tabName = this.dataset.tab;
@@ -107,7 +104,6 @@ int main() {
         });
     });
     
-    // Language selector functionality
     const languageSelect = document.getElementById('languageSelect');
     if (languageSelect) {
         languageSelect.addEventListener('change', function() {
@@ -123,7 +119,6 @@ int main() {
         });
     }
     
-    // Run code functionality
     document.getElementById('runCode').addEventListener('click', async function() {
         const code = editor ? editor.getValue() : '';
         const language = languageSelect ? languageSelect.value : 'python';
@@ -191,7 +186,6 @@ int main() {
         }
     });
     
-    // Submit code functionality - show popup
     document.getElementById('submitCode').addEventListener('click', function() {
         const code = editor ? editor.getValue() : '';
         const language = languageSelect ? languageSelect.value : 'python';
@@ -201,7 +195,6 @@ int main() {
             return;
         }
         
-        // Update popup content
         const popupLanguageEl = document.getElementById('popupLanguage');
         const popupLineCountEl = document.getElementById('popupLineCount');
         
@@ -212,14 +205,12 @@ int main() {
             popupLineCountEl.textContent = editor.getModel().getLineCount();
         }
         
-        // Show popup
         const submitPopup = document.getElementById('submitPopup');
         if (submitPopup) {
             submitPopup.classList.add('show');
         }
     });
     
-    // Handle popup close button
     const closeSubmitPopup = document.getElementById('closeSubmitPopup');
     if (closeSubmitPopup) {
         closeSubmitPopup.addEventListener('click', function() {
@@ -227,7 +218,6 @@ int main() {
         });
     }
     
-    // Handle popup overlay click to close
     const submitPopup = document.getElementById('submitPopup');
     if (submitPopup) {
         submitPopup.addEventListener('click', function(e) {
@@ -430,10 +420,8 @@ int main() {
             document.head.appendChild(style);
         }
         
-        // Add to body
         document.body.appendChild(celebrationPopup);
         
-        // Auto remove after 4 seconds
         setTimeout(() => {
             celebrationPopup.style.animation = 'celebrationSlideOut 0.3s ease-in forwards';
             setTimeout(() => {
@@ -443,7 +431,6 @@ int main() {
             }, 300);
         }, 4000);
         
-        // Click to dismiss
         celebrationPopup.addEventListener('click', () => {
             celebrationPopup.style.animation = 'celebrationSlideOut 0.3s ease-in forwards';
             setTimeout(() => {
@@ -454,7 +441,6 @@ int main() {
         });
     }
     
-    // Auto-save functionality
     function autoSave() {
         const code = editor ? editor.getValue() : '';
         const language = languageSelect ? languageSelect.value : 'python';
@@ -493,10 +479,8 @@ int main() {
         saveTimeout = setTimeout(autoSave, 1000);
     }
     
-    // Load saved code after initialization
     setTimeout(loadSavedCode, 1000);
     
-    // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
@@ -511,9 +495,7 @@ int main() {
         }
     });
     
-    // Function to show rating celebration
     function showRatingCelebration(pointsGained, newRating, rankInfo) {
-        // Create celebration element
         const celebration = document.createElement('div');
         celebration.style.cssText = `
             position: fixed;
@@ -552,7 +534,6 @@ int main() {
             </button>
         `;
         
-        // Add animation styles if not already added
         if (!document.getElementById('celebration-styles')) {
             const style = document.createElement('style');
             style.id = 'celebration-styles';
@@ -576,11 +557,163 @@ int main() {
         
         document.body.appendChild(celebration);
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             if (celebration.parentElement) {
                 celebration.remove();
             }
         }, 5000);
     }
+
+    function initSubmissionsToggle() {
+        const toggleBtn = document.getElementById('submissionsToggle');
+        const toggleText = document.getElementById('toggleText');
+        const submissionViews = document.querySelectorAll('.submissions-view');
+
+        if (!toggleBtn) return;
+
+        createDropdownMenu(toggleBtn);
+
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.querySelector('.toggle-dropdown');
+            const isOpen = dropdown && dropdown.classList.contains('show');
+            
+            if (isOpen) {
+                closeDropdown();
+            } else {
+                openDropdown();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.submissions-toggle')) {
+                closeDropdown();
+            }
+        });
+
+        function createDropdownMenu(button) {
+            const existingDropdown = document.querySelector('.toggle-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'toggle-dropdown';
+            
+            const userCount = document.querySelectorAll('#my-submissions-view .submission-item').length;
+            
+            dropdown.innerHTML = `
+                <div class="toggle-option active" data-view="my-submissions">
+                    <i class="bx bx-user"></i>
+                    <span>Bài nộp của bạn</span>
+                </div>
+                <div class="toggle-option" data-view="all-submissions">
+                    <i class="bx bx-globe"></i>
+                    <span>Tất cả bài nộp</span>
+                </div>
+            `;
+
+            dropdown.querySelectorAll('.toggle-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const targetView = option.dataset.view;
+                    switchView(targetView, option);
+                    closeDropdown();
+                });
+            });
+
+            button.parentElement.appendChild(dropdown);
+        }
+
+        function openDropdown() {
+            const dropdown = document.querySelector('.toggle-dropdown');
+            const button = document.getElementById('submissionsToggle');
+            
+            if (dropdown && button) {
+                dropdown.classList.add('show');
+                button.classList.add('open');
+            }
+        }
+
+        function closeDropdown() {
+            const dropdown = document.querySelector('.toggle-dropdown');
+            const button = document.getElementById('submissionsToggle');
+            
+            if (dropdown && button) {
+                dropdown.classList.remove('show');
+                button.classList.remove('open');
+            }
+        }
+
+        function switchView(targetView, selectedOption) {
+            document.querySelectorAll('.toggle-option').forEach(opt => opt.classList.remove('active'));
+            selectedOption.classList.add('active');
+
+            submissionViews.forEach(view => view.classList.add('hidden'));
+
+            const targetElement = document.getElementById(targetView + '-view');
+            if (targetElement) {
+                targetElement.classList.remove('hidden');
+            }
+
+            const submissionsTitle = document.getElementById('submissionsTitle');
+            if (targetView === 'my-submissions') {
+                const userCount = document.querySelectorAll('#my-submissions-view .submission-item').length;
+                toggleText.innerHTML = `
+                    <i class="bx bx-user"></i>
+                    Bài nộp của bạn (${userCount})
+                `;
+                if (submissionsTitle) {
+                    submissionsTitle.innerHTML = `
+                        <i class="bx bx-history"></i>
+                        Lịch sử nộp bài của bạn (${userCount} submissions)
+                    `;
+                }
+            } else if (targetView === 'all-submissions') {
+                toggleText.innerHTML = `
+                    <i class="bx bx-globe"></i>
+                    Tất cả bài nộp
+                `;
+                if (submissionsTitle) {
+                    submissionsTitle.innerHTML = `
+                        <i class="bx bx-globe"></i>
+                        Tất cả bài nộp
+                    `;
+                }
+                loadAllSubmissions();
+            }
+
+            toggleBtn.dataset.current = targetView;
+        }
+    }
+
+    function loadAllSubmissions() {
+        console.log('Loading all submissions...');
+        
+        const allSubmissionsView = document.getElementById('all-submissions-view');
+        if (allSubmissionsView) {
+            const container = allSubmissionsView.querySelector('.submissions-container');
+            if (container && container.children.length === 0) {
+                container.innerHTML = `
+                    <div class="console-message">
+                        <i class="bx bx-loader-alt bx-spin"></i>
+                        Đang tải dữ liệu submissions...
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    if (container.innerHTML.includes('Đang tải dữ liệu')) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <i class="bx bx-info-circle"></i>
+                                <p>Chưa có submissions từ người dùng khác.</p>
+                            </div>
+                        `;
+                    }
+                }, 1000);
+            }
+        }
+    }
+
+    initSubmissionsToggle();
 });
