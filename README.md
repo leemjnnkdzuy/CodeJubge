@@ -105,3 +105,42 @@ CodeJubge/
 ├── temp/                     # Thư mục tạm (code execution)
 └── setup_database.php       # Script thiết lập database
 ```
+### Entity Diagram
+![ERD](Images/ERD.png)
+
+### Usecase Diagram
+![UC](Images/Usecase1.png)
++ Hình 1: Biểu đồ usecase tổng quát
+
+![UC](Images/Usecase2.png)
++ Hình 2: Biểu đồ usecase tổng quát của quản lý bài toán
+
+![UC](Images/Usecase3.png)
++ Hình 3: Biểu đồ usecase tổng quát của chấm bài tự độ
+
+![UC](Images/Usecase4.png)
++ Hình 4: Biểu đồ usecase tổng quát của bảng xếp hạng
+
+![UC](Images/Usecase5.png)
++ Hình 5: Biểu đồ usecase tổng quát của diễn đàn thảo luận
+![UC](Images/Usecase6.png)
++ Hình 2: Biểu đồ usecase quản lý cuộc thi
+
+### Activity Diagram
+![AD](Images/Activate1.png)
++ Hình 1:  Biểu đồ hoạt động tổng quát
+
+![AD](Images/Activate2.png)
++ Hình 2: Biểu đồ usecase quản lý cuộc thi
+
+![AD](Images/Activate3.png)
++ Hình 3: Biểu đồ hoạt động đăng nhập tài khoản
+
+![AD](Images/Activate4.png)
++ Hình 4: Biểu đồ hoạt động nộp bài và chấm bài tự động
+
+![AD](Images/Activate5.png)
++ Hình 5: Biểu đồ hoạt động tham gia diễn đàn thảo luận
+
+![AD](Images/Activate6.png)
++ Hình 6: Biểu đồ hoạt động tham gia cuộc thi
