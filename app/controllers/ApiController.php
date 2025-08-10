@@ -487,17 +487,14 @@ class ApiController
     
     private function getMemoryUsage()
     {
-        // Simple memory usage estimation (in MB)
         return round(memory_get_usage(true) / 1024 / 1024, 2);
     }
     
     private function getTimeoutCommand($seconds)
     {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows timeout command
             return 'timeout /t ' . $seconds;
         } else {
-            // Linux/Unix timeout command
             return 'timeout ' . $seconds . 's';
         }
     }
