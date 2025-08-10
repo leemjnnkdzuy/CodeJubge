@@ -389,33 +389,26 @@ function loadContests(status = 'all', search = '', filters = {}) {
 }
 
 function renderContests(contests) {
-    const container = document.querySelector('.contests-grid');
-    if (!container) return;
-    
+    const grid = document.querySelector('.contests-grid');
+    const empty = document.querySelector('.contests-empty');
+    if (!grid || !empty) return;
+
     if (!contests || contests.length === 0) {
-        container.innerHTML = `
-            <div class="contests-empty">
-                <i class="fas fa-trophy"></i>
-                <h3>Chưa có contest nào</h3>
-                <p>Hiện tại chưa có contest nào. Hãy tạo contest đầu tiên!</p>
-                <button class="btn btn-primary" id="createFirstContestBtn">
-                    <i class="fas fa-plus"></i> Tạo Contest Đầu Tiên
-                </button>
-            </div>
-        `;
-        
-        // Handle create first contest button
+        grid.style.display = 'none';
+        empty.style.display = '';
+        // Đảm bảo nút tạo contest hoạt động
         const createFirstBtn = document.getElementById('createFirstContestBtn');
         if (createFirstBtn) {
             createFirstBtn.addEventListener('click', function() {
                 document.getElementById('createContestModal').style.display = 'block';
             });
         }
-        
         return;
     }
-    
-    container.innerHTML = contests.map(contest => renderContestCard(contest)).join('');
+
+    empty.style.display = 'none';
+    grid.style.display = '';
+    grid.innerHTML = contests.map(contest => renderContestCard(contest)).join('');
 }
 
 function renderContestCard(contest) {
